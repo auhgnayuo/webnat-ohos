@@ -24,6 +24,9 @@ export interface Connection {
   /** 连接的元数据，在连接建立时由 Web 端传递，包含连接的附加信息 */
   readonly attributes?: Record<string, ESObject>;
 
+  /** 当前连接的界面 URL，在连接建立时当前页面的地址 */
+  readonly url?: string;
+
   /** 连接是否已关闭 */
   readonly closed: boolean;
 }
@@ -38,6 +41,8 @@ export class ConnectionImpl implements Connection {
   id: string;
   /** 连接的元数据 */
   attributes?: Record<string, ESObject>;
+  /** 当前连接的界面 URL，在连接建立时当前页面的地址 */
+  url?: string;
   /** 连接是否已关闭 */
   closed: boolean = false;
   /** 消息发送函数，由创建 Connection 时注入，封装了实际的消息发送逻辑 */
@@ -48,11 +53,13 @@ export class ConnectionImpl implements Connection {
    *
    * @param id 连接 ID
    * @param attributes 连接元数据
+   * @param url 当前连接的界面 URL，可选
    * @param sendMessage 消息发送函数，用于向 Web 端发送消息
    */
-  constructor(id: string, attributes: Record<string, ESObject>, sendMessage: (message: Message) => Promise<void>) {
+  constructor(id: string, attributes: Record<string, ESObject>, url: string | undefined, sendMessage: (message: Message) => Promise<void>) {
     this.id = id;
     this.attributes = attributes;
+    this.url = url;
     this.sendMessage = sendMessage;
   }
 

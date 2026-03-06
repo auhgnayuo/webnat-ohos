@@ -543,8 +543,10 @@ export class Webnat {
         }
         // 提取连接元数据
         const attributes: Record<string, ESObject> = message.open.param;
+        // 当前连接的界面 URL（连接建立时页面地址）
+        const url = this.getWebController()?.getUrl();
         // 创建新的 Connection 实例
-        const connection = new ConnectionImpl(from, attributes, async (messageToSend: Message): Promise<void> => {
+        const connection = new ConnectionImpl(from, attributes, url, async (messageToSend: Message): Promise<void> => {
           const controller = this.getWebController();
           if (!controller) {
             // Controller 已被回收，无法发送消息

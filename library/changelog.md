@@ -9,3 +9,7 @@
 - 支持 iframe 消息自动转发
 - 内置超时控制和主动取消机制 (AbortController)
 - 基于 HarmonyOS Web 组件，支持 API 12+
+
+## 1.0.1（2026-03-06）
+### Features
+- Connection增加url
