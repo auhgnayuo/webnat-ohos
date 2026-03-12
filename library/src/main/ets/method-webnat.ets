@@ -238,7 +238,7 @@ export class MethodWebnat {
 
     try { // 发送方法调用请求
       const invokeMessage = Message.invoke(connection.id, id, func.method, func.param);
-      await (connection as ConnectionImpl).send(invokeMessage);
+      (connection as ConnectionImpl).send(invokeMessage);
       return await new Promise<ESObject>((resolve, reject) => {
         this.onCompletes.set(id, (result?: ESObject, error?: WebnatError | null) => {
           if (error) {
