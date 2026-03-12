@@ -69,7 +69,7 @@ export class Webnat {
     const prefix = "Webnat";
     const webnatUA = `${prefix}/${WebnatVersion}`;
     try {
-      const existingUA = controller.getUserAgent();
+      const existingUA = controller.getCustomUserAgent();
       const components = existingUA.split(" ")
         .filter((c: string) => c.length > 0 && !c.startsWith(prefix));
       controller.setCustomUserAgent([...components, webnatUA].join(" "));
