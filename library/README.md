@@ -41,7 +41,7 @@ Webnat requires a Web-side implementation and also supports other Native platfor
 | Platform | Repository |
 |----------|------------|
 | Web (JavaScript/TypeScript) | [webnat-web](https://github.com/auhgnayuo/webnat-web) |
-| iOS / macOS (Swift) | [webnat-os](https://github.com/auhgnayuo/webnat-os) |
+| iOS / macOS (Swift) | [webnat-darwin](https://github.com/auhgnayuo/webnat-darwin) |
 | Android (Kotlin) | [webnat-android](https://github.com/auhgnayuo/webnat-android) |
 
 ## Usage

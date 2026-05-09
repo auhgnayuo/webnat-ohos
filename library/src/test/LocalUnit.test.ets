@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@ohos/hypium';
+import { Message } from '../main/ets/message';
 
 export default function localUnitTest() {
   describe('localUnitTest', () => {
@@ -21,13 +22,32 @@ export default function localUnitTest() {
       // Presets a clear action, which is performed after all test cases of the test suite end.
       // This API supports only one parameter: clear action function.
     });
-    it('assertContain', 0, () => {
-      // Defines a test case. This API supports three parameters: test case name, filter parameter, and test case function.
-      let a = 'abc';
-      let b = 'b';
-      // Defines a variety of assertion methods, which are used to declare expected boolean conditions.
-      expect(a).assertContain(b);
-      expect(a).assertEqual(a);
+    it('message_open_round_trip', 0, () => {
+      const original = Message.open('conn-a');
+      const dict = original.toDictionary();
+      const parsed = Message.from(dict);
+      expect(parsed?.from).assertEqual('conn-a');
+      expect(parsed?.open === undefined).assertEqual(false);
+    });
+
+    it('message_broadcast_round_trip', 0, () => {
+      const original = Message.broadcast('conn-a', 'evt');
+      const parsed = Message.from(original.toDictionary());
+      expect(parsed?.broadcast?.name).assertEqual('evt');
+    });
+
+    it('message_from_rejects_wrong_magic', 0, () => {
+      const dict = Message.open('conn-a').toDictionary();
+      dict['magic'] = 'NOPE';
+      const parsed = Message.from(dict);
+      expect(parsed).assertEqual(undefined);
+    });
+
+    it('message_from_rejects_missing_fields', 0, () => {
+      const invalid = Message.open('conn-a').toDictionary();
+      invalid['from'] = '';
+      const parsed = Message.from(invalid);
+      expect(parsed).assertEqual(undefined);
     });
   });
 }

@@ -261,11 +261,15 @@ export class Webnat {
    * ```
    */
   broadcast(name: string, params?: ESObject, connection?: Connection): void {
-    const c = connection ?? (() => {
-      const connections = Array.from(this.connections.values());
-      return connections.length > 0 ? connections[0] : undefined;
-    })();
-    this.broadcastWebnat.broadcast(name, params ?? null, c);
+    if (connection) {
+      this.broadcastWebnat.broadcast(name, params ?? null, connection);
+      return;
+    }
+    // 快照后遍历，避免回调期间连接集合变化影响当前广播。
+    const snapshot = Array.from(this.connections.values());
+    snapshot.forEach((c) => {
+      this.broadcastWebnat.broadcast(name, params ?? null, c);
+    });
   }
 
   // MARK: - 方法调用 API

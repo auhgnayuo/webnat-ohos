@@ -13,7 +13,7 @@
  * - 按事件名称分类
  * - 不需要响应
  *
- * 消息格式：使用 Message 协议，包含 broadcast 字段
+ * 消息格式：使用 Message 类型，包含 broadcast 字段
  * - 广播消息：`{ from: string, to: string, broadcast: { name: string, param?: ESObject } }`
  */
 
@@ -84,11 +84,11 @@ export class BroadcastWebnat {
   /**
    * 广播消息
    *
-   * 向指定连接或所有连接发送广播消息。如果 `connection` 为 `undefined`，则向所有当前活跃的连接广播。
+   * 向单个连接发送广播消息。全量广播由 `Webnat.broadcast` 在上层遍历连接并重复调用本方法实现。
    *
    * @param name 广播事件名称，用于标识事件类型
    * @param params 广播参数，可以是任意可序列化的对象，可选
-   * @param connection 目标连接，如果为 `undefined` 则广播到所有连接
+   * @param connection 目标连接，未传时不发送
    */
   broadcast = (name: string, params?: ESObject, connection?: Connection): void => {
     if (connection) {
