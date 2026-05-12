@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5] (2026-05-12)
+
+### Fixed
+
+- Native→Web 注入：`runJavaScript` 侧改为 `JSON.stringify([message.toDictionary()])`，与 Android `toJson()` 语义一致，避免对 `Message` 类实例直接 `JSON.stringify` 时因引擎差异产生非协议字段。
+
+### Note
+
+- `JavaScriptAliveKeeper` 仍会周期性调用 `raw(null, connection)` 保活；Web 端可能间歇收到 `raw` 且 `param` 为 `null`，属预期行为。
+
+---
+
 ## [1.0.4] (2026-05-12)
 
 ### Fixed
