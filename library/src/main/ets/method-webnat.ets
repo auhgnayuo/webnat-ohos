@@ -245,7 +245,7 @@ export class MethodWebnat {
         };
 
         const invokeMessage = Message.invoke(connection.id, id, func.method, func.param);
-        void conn.send(invokeMessage).catch((err: ESObject) => {
+        void conn.send(invokeMessage).catch((err: ESObject): void => {
           const onComplete = this.onCompletes.get(id);
           if (!onComplete) {
             return;
@@ -339,7 +339,7 @@ export class MethodWebnat {
         }
       };
 
-      const complete = (result: ESObject | null, error: WebnatError | null): void => {
+      const complete = (result: ESObject | undefined, error: WebnatError | null): void => {
         if (settled) {
           return;
         }
@@ -349,7 +349,7 @@ export class MethodWebnat {
           const replyMessage = Message.reply(connection.id, id, undefined, error);
           (connection as ConnectionImpl).trySend(replyMessage);
         } else {
-          const replyMessage = Message.reply(connection.id, id, result ?? null, undefined);
+          const replyMessage = Message.reply(connection.id, id, result, undefined);
           (connection as ConnectionImpl).trySend(replyMessage);
         }
       };
@@ -386,13 +386,12 @@ export class MethodWebnat {
       };
 
       const listenerPromise: Promise<ESObject> = listener(param, abortController.signal, notify, connection);
-      try {
-        const result: ESObject = await listenerPromise;
+      await listenerPromise.then((result: ESObject): void => {
         complete(result, null);
-      } catch (error) {
-        const w = WebnatError.from(error as ESObject);
-        complete(null, w ?? new WebnatError(WebnatErrorCode.UNKNOWN, 'Unknown Error'));
-      }
+      }).catch((err: ESObject): void => {
+        const w = WebnatError.from(err);
+        complete(undefined, w ?? new WebnatError(WebnatErrorCode.UNKNOWN, 'Unknown Error'));
+      });
       return;
     }
   }

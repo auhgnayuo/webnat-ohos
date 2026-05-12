@@ -546,9 +546,13 @@ export class Webnat {
           return;
         }
         // 提取连接元数据（与 Android 等端一致：缺省 param 时用空对象）
-        const rawParam = message.open.param;
-        const attributes: Record<string, ESObject> =
-          (rawParam !== undefined && rawParam !== null) ? (rawParam as Record<string, ESObject>) : {};
+        const emptyAttrs: Record<string, ESObject> = {};
+        const openMsg = message.open;
+        const paramForAttrs: ESObject | undefined = openMsg.param;
+        let attributes: Record<string, ESObject> = emptyAttrs;
+        if (paramForAttrs !== undefined) {
+          attributes = paramForAttrs as Record<string, ESObject>;
+        }
         // 当前连接的界面 URL（连接建立时页面地址）
         const url = this.getWebController()?.getUrl();
         // 创建新的 Connection 实例

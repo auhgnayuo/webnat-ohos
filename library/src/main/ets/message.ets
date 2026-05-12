@@ -490,7 +490,12 @@ export class Message {
     let open: Open | undefined;
     if (dict["open"]) {
       const openDict = dict["open"] as Record<string, ESObject>;
-      open = new Open(openDict["param"] as ESObject);
+      const openParam: ESObject | undefined = openDict["param"] as ESObject | undefined;
+      if (openParam === undefined) {
+        open = new Open();
+      } else {
+        open = new Open(openParam);
+      }
     }
     
     let close: Close | undefined;

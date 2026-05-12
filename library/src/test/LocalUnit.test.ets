@@ -49,5 +49,18 @@ export default function localUnitTest() {
       const parsed = Message.from(invalid);
       expect(parsed).assertEqual(undefined);
     });
+
+    it('message_from_open_dict_without_param', 0, () => {
+      const dict: Record<string, ESObject> = {
+        'magic': Message.MAGIC as ESObject,
+        'from': 'conn-b' as ESObject,
+        'to': Message.NATIVE_UUID as ESObject,
+        'open': {} as ESObject,
+      };
+      const parsed = Message.from(dict);
+      expect(parsed !== undefined).assertEqual(true);
+      expect(parsed?.open !== undefined).assertEqual(true);
+      expect(parsed?.open?.param === undefined).assertEqual(true);
+    });
   });
 }
