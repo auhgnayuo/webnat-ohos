@@ -563,7 +563,9 @@ export class Webnat {
             return;
           }
           try {
-            const string = JSON.stringify([messageToSend]);
+            // 与 Android 端一致：必须序列化协议字典，不能对 Message 类实例直接 JSON.stringify，
+            // 否则会产生占位字段（如 raw: {} / param: null），Web 端会把 raw 判为真并误触发 onRaw。
+            const string = JSON.stringify([messageToSend.toDictionary()]);
             // 转义特殊字符，确保可以安全地嵌入到 JavaScript 单引号字符串中
             // const escapedString = string.replace(/\\/g, '\\\\')
             //   .replace(/'/g, "\\'")
