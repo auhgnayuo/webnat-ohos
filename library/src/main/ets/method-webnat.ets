@@ -25,7 +25,7 @@
  */
 
 import { util } from '@kit.ArkTS';
-import { WebnatError } from './error';
+import { WebnatError, WebnatErrorCode } from './error';
 import { Message } from './message';
 import { Connection, ConnectionImpl } from './connection';
 import { AbortController, AbortSignal } from './abortController';
@@ -145,7 +145,7 @@ export class MethodWebnat {
    * @param options 调用选项，可选
    * @param options.timeout 超时时间（毫秒），超时后会自动取消调用并抛出超时错误
    * @param options.onNotification 接收到途中的通知时回调，用于接收方法执行过程中的进度或状态更新
-   * @param options.signal 可选，AbortSignal，用于主动取消操作
+   * @param options.signal 可选，AbortSignal，用于主动取消操作；若传入时已处于 aborted 状态，立即抛出取消错误（与 Web 端语义一致）
    * @param connection 目标连接，如果为 undefined 则报错
    * @returns Promise<ESObject>，resolve 时返回方法执行结果，reject 时返回错误
    * @throws {WebnatError} 方法执行错误，包括：
@@ -157,88 +157,23 @@ export class MethodWebnat {
   async method(func: MethodFunc, options?: MethodOptions, connection?: Connection,): Promise<ESObject> {
     if (!connection) {
       throw WebnatError.closed();
-    } // 生成唯一调用 ID
+    }
+    if (options?.signal?.aborted) {
+      throw WebnatError.cancelled();
+    }
     const id = util.generateRandomUUID();
-    const cancelAbort = (() => {
-      const signal = options?.signal;
-      if (!signal) {
-        return () => {
-        };
-      }
-      const abort = () => {
-        const onComplete = this.onCompletes.get(id);
-        if (!onComplete) {
-          return;
-        }
-        onComplete(undefined, WebnatError.cancelled());
-        const abortMessage = Message.abort(connection.id, id);
-        (connection as ConnectionImpl).trySend(abortMessage);
-      };
-      signal.addListener(abort);
-      return () => {
-        signal.removeListener(abort);
-      };
-    })();
+    const conn = connection as ConnectionImpl;
 
-    const cancelTimeout = (() => {
-      const timeout = options?.timeout;
-      if (!timeout || timeout <= 0) {
-        return () => {
-        };
-      }
-      const timer = setTimeout(() => {
-        const onComplete = this.onCompletes.get(id);
-        if (!onComplete) {
-          return;
-        }
-        onComplete(undefined, WebnatError.timeout());
-        const abortMessage = Message.abort(connection.id, id);
-        (connection as ConnectionImpl).trySend(abortMessage);
-      }, timeout);
-      return () => {
-        clearTimeout(timer);
-      };
-    })();
+    let cancelAbort: () => void = () => {
+    };
+    let cancelTimeout: () => void = () => {
+    };
+    let cancelOnNotification: () => void = () => {
+    };
+    let cancelOnClose: () => void = () => {
+    };
 
-    const cancelOnNotification = (() => {
-      const onNotification = options?.onNotification;
-      if (!onNotification) {
-        return () => {
-        };
-      }
-      this.onNotifications.set(id, onNotification);
-      return () => {
-        this.onNotifications.delete(id);
-      };
-    })();
-
-    const cancelOnClose = (() => {
-      let onCloses = this.onCloses.get(connection.id);
-      if (!onCloses) {
-        onCloses = new Map();
-        this.onCloses.set(connection.id, onCloses);
-      }
-      onCloses.set(id, () => {
-        const onComplete = this.onCompletes.get(id);
-        if (!onComplete) {
-          return;
-        }
-        onComplete(undefined, WebnatError.closed());
-      });
-      return () => {
-        const onCloses = this.onCloses.get(connection.id);
-        if (onCloses) {
-          onCloses.delete(id);
-          if (onCloses.size === 0) {
-            this.onCloses.delete(connection.id);
-          }
-        }
-      };
-    })();
-
-    try { // 发送方法调用请求
-      const invokeMessage = Message.invoke(connection.id, id, func.method, func.param);
-      (connection as ConnectionImpl).send(invokeMessage);
+    try {
       return await new Promise<ESObject>((resolve, reject) => {
         this.onCompletes.set(id, (result?: ESObject, error?: WebnatError | null) => {
           if (error) {
@@ -247,10 +182,79 @@ export class MethodWebnat {
             resolve(result ?? null);
           }
         });
+
+        const signal = options?.signal;
+        if (signal) {
+          const abort = (): void => {
+            const onComplete = this.onCompletes.get(id);
+            if (!onComplete) {
+              return;
+            }
+            onComplete(undefined, WebnatError.cancelled());
+            void conn.trySend(Message.abort(connection.id, id));
+          };
+          signal.addListener(abort);
+          cancelAbort = (): void => {
+            signal.removeListener(abort);
+          };
+        }
+
+        const timeout = options?.timeout;
+        if (timeout !== undefined && timeout > 0) {
+          const timer = setTimeout((): void => {
+            const onComplete = this.onCompletes.get(id);
+            if (!onComplete) {
+              return;
+            }
+            onComplete(undefined, WebnatError.timeout());
+            void conn.trySend(Message.abort(connection.id, id));
+          }, timeout);
+          cancelTimeout = (): void => {
+            clearTimeout(timer);
+          };
+        }
+
+        const onNotification = options?.onNotification;
+        if (onNotification) {
+          this.onNotifications.set(id, onNotification);
+          cancelOnNotification = (): void => {
+            this.onNotifications.delete(id);
+          };
+        }
+
+        let onClosesMap = this.onCloses.get(connection.id);
+        if (!onClosesMap) {
+          onClosesMap = new Map();
+          this.onCloses.set(connection.id, onClosesMap);
+        }
+        onClosesMap.set(id, (): void => {
+          const onComplete = this.onCompletes.get(id);
+          if (!onComplete) {
+            return;
+          }
+          onComplete(undefined, WebnatError.closed());
+        });
+        cancelOnClose = (): void => {
+          const m = this.onCloses.get(connection.id);
+          if (m) {
+            m.delete(id);
+            if (m.size === 0) {
+              this.onCloses.delete(connection.id);
+            }
+          }
+        };
+
+        const invokeMessage = Message.invoke(connection.id, id, func.method, func.param);
+        void conn.send(invokeMessage).catch((err: ESObject) => {
+          const onComplete = this.onCompletes.get(id);
+          if (!onComplete) {
+            return;
+          }
+          const w = WebnatError.from(err);
+          onComplete(undefined, w ?? new WebnatError(WebnatErrorCode.UNKNOWN, 'Send failed'));
+        });
       });
-    } catch (error) {
-      throw error as Error;
-    } finally { // 清理资源
+    } finally {
       this.onCompletes.delete(id);
       cancelOnNotification();
       cancelAbort();
@@ -278,10 +282,15 @@ export class MethodWebnat {
       const reply = message.reply;
       const id = reply.id;
       const result: ESObject = reply.result;
-      const error: ESObject = reply.error;
+      const errorField: ESObject = reply.error;
       const onComplete = this.onCompletes.get(id);
       if (onComplete) {
-        onComplete(result, WebnatError.from(error));
+        if (errorField !== undefined && errorField !== null) {
+          const w = WebnatError.from(errorField);
+          onComplete(result, w ?? new WebnatError(WebnatErrorCode.UNKNOWN, 'Unknown Error'));
+        } else {
+          onComplete(result, null);
+        }
       }
       return;
     }
@@ -306,6 +315,9 @@ export class MethodWebnat {
       const id = invoke.id;
       const method = invoke.method;
       const param: ESObject = invoke.param;
+      if (!id || typeof id !== 'string') {
+        return;
+      }
       const listener = this.listeners.get(method);
       if (!listener) { // 方法未实现，返回错误
         const error = WebnatError.unimplemented(method);
@@ -314,75 +326,72 @@ export class MethodWebnat {
         return;
       }
       const abortController = new AbortController();
-      // 检查是否已完成（通过检查 aborts 中是否还有该 id）
-      const getIsCompleted = () => {
-        return !this.aborts.has(id);
-      };
+      let settled = false;
 
-      // 清理函数
-      const clean = () => {
+      const clean = (): void => {
         this.aborts.delete(id);
-        const onCloses = this.onCloses.get(connection.id);
-        if (onCloses) {
-          onCloses.delete(id);
-          if (onCloses.size === 0) {
+        const onClosesForConn = this.onCloses.get(connection.id);
+        if (onClosesForConn) {
+          onClosesForConn.delete(id);
+          if (onClosesForConn.size === 0) {
             this.onCloses.delete(connection.id);
           }
         }
       };
 
-      // 完成回调：向调用方发送最终的执行结果或错误
-      const complete = (result: ESObject, error: WebnatError | null) => {
-        if (getIsCompleted()) {
+      const complete = (result: ESObject | null, error: WebnatError | null): void => {
+        if (settled) {
           return;
         }
+        settled = true;
         clean();
-        if (error) { // 有错误，发送错误响应
+        if (error) {
           const replyMessage = Message.reply(connection.id, id, undefined, error);
           (connection as ConnectionImpl).trySend(replyMessage);
-        } else { // 成功，发送结果响应
+        } else {
           const replyMessage = Message.reply(connection.id, id, result ?? null, undefined);
           (connection as ConnectionImpl).trySend(replyMessage);
         }
       };
 
-      // 注册取消函数（收到取消请求时会触发此函数）
-      this.aborts.set(id, () => {
-        if (getIsCompleted()) {
+      this.aborts.set(id, (): void => {
+        if (settled) {
           return;
         }
+        settled = true;
+        clean();
         abortController.abort();
       });
-      // 注册连接关闭回调（连接关闭时即视为调用被终止，需要清理与主动取消）
-      let onCloses = this.onCloses.get(connection.id);
-      if (!onCloses) {
-        onCloses = new Map();
-        this.onCloses.set(connection.id, onCloses);
+
+      let onClosesMap = this.onCloses.get(connection.id);
+      if (!onClosesMap) {
+        onClosesMap = new Map();
+        this.onCloses.set(connection.id, onClosesMap);
       }
-      onCloses.set(id, () => {
-        if (getIsCompleted()) {
+      onClosesMap.set(id, (): void => {
+        if (settled) {
           return;
         }
+        settled = true;
+        clean();
         abortController.abort();
       });
-      // 通知函数
-      const notify = (param: ESObject) => {
-        if (getIsCompleted()) {
+
+      const notify = (nParam: ESObject): void => {
+        if (settled) {
           return;
         }
-        const notifyMessage = Message.notify(connection.id, id, param);
+        const notifyMessage = Message.notify(connection.id, id, nParam);
         (connection as ConnectionImpl).trySend(notifyMessage);
       };
-      // 执行方法处理函数（返回 Promise）
-      // 注意：在 webnat_web/webnat_ohos 中，listener 返回 Promise，而不是取消函数
-      // 取消操作通过 AbortController 的 signal 来实现
+
       const listenerPromise: Promise<ESObject> = listener(param, abortController.signal, notify, connection);
-      try { // 等待方法处理函数执行完成
+      try {
         const result: ESObject = await listenerPromise;
         complete(result, null);
-      } catch (error) { // 如果未被取消，发送错误结果
-        const errorESObject = WebnatError.from(error as ESObject);
-        complete(null, errorESObject);
+      } catch (error) {
+        const w = WebnatError.from(error as ESObject);
+        complete(null, w ?? new WebnatError(WebnatErrorCode.UNKNOWN, 'Unknown Error'));
       }
       return;
     }

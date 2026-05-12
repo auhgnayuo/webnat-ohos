@@ -120,10 +120,10 @@ export class Webnat {
   /**
    * 获取所有连接
    *
-   * @returns 连接字典，key 为连接 ID，value 为 Connection 实例
+   * @returns 连接字典的浅拷贝，key 为连接 ID，value 为 Connection 实例（避免外部修改内部 Map）
    */
   getConnections(): Map<string, Connection> {
-    return this.connections;
+    return new Map(this.connections);
   }
 
   // MARK: - 原始消息 API
@@ -364,7 +364,7 @@ export class Webnat {
    * @param options 方法调用选项，可选
    * @param options.timeout 超时时间（毫秒），超时后会自动取消调用并抛出超时错误
    * @param options.onNotification 收到通知时的回调函数，用于接收方法执行过程中的进度或状态更新
-   * @param options.signal AbortSignal，用于主动取消调用
+   * @param options.signal AbortSignal，用于主动取消调用；若传入时已处于 aborted 状态，立即抛出取消错误（与 Web 端一致）
    * @param connection 目标连接，如果为 undefined 则选择第一个可用连接
    * @returns Promise，resolve 时返回方法执行结果，reject 时返回错误
    * @throws {WebnatError} 方法执行错误，包括：
@@ -545,8 +545,10 @@ export class Webnat {
         if (this.connections.has(from)) {
           return;
         }
-        // 提取连接元数据
-        const attributes: Record<string, ESObject> = message.open.param;
+        // 提取连接元数据（与 Android 等端一致：缺省 param 时用空对象）
+        const rawParam = message.open.param;
+        const attributes: Record<string, ESObject> =
+          (rawParam !== undefined && rawParam !== null) ? (rawParam as Record<string, ESObject>) : {};
         // 当前连接的界面 URL（连接建立时页面地址）
         const url = this.getWebController()?.getUrl();
         // 创建新的 Connection 实例

@@ -19,7 +19,6 @@
 
 import { Message } from './message';
 import { Connection, ConnectionImpl } from './connection';
-import { WebnatError } from './error';
 
 export class BroadcastWebnat {
 
@@ -113,8 +112,9 @@ export class BroadcastWebnat {
     }
     const name = message.broadcast.name;
     const params: ESObject = message.broadcast.param;
+    // 与 Android / iOS 一致：非法 name 静默丢弃，不向业务抛错
     if (!name || typeof name !== 'string') {
-      throw WebnatError.deserializationFailed(message.broadcast);
+      return;
     }
     // 触发该事件名称的所有回调函数
     const listeners = this.listeners.get(name);
