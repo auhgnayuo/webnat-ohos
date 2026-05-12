@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] (2026-05-12)
+
+### Fixed
+
+- 满足 ArkTS 严格规则：`Message.from` 在 `open` 无 `param` 时不再把缺失字段强转为 `ESObject`；`Webnat` 从 `open.param` 构造连接 `attributes` 时避免隐式 `any`。
+- `MethodWebnat`：出站 `send` 与入站 listener 的拒绝路径通过 `Promise.catch((err: ESObject) => …)` 与 `WebnatError.from` 保留错误信息（`try/catch` 在部分工具链下无法为绑定变量标注类型）；`invoke` 处理仍 `await` 整条 Promise 链以保持顺序。
+
+### Added
+
+- 扩充 Hypium 单测：`MethodWebnat`、`BroadcastWebnat`，以及 `Message.from` 对空 `open` 对象的用例。
+
+---
+
 ## [1.0.3] (2026-03-12)
 
 ### Features
