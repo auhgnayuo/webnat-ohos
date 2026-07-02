@@ -29,7 +29,7 @@ ohpm install webnat
 ```json5
 {
   "dependencies": {
-    "webnat": "1.0.5"
+    "webnat": "1.2.0"
   }
 }
 ```

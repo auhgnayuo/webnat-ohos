@@ -22,6 +22,7 @@
  * ```
  */
 import { AbortSignal } from './abortController'
+import { BroadcastMethodCall } from './broadcast-method-call'
 import { BroadcastWebnat } from './broadcast-webnat'
 import { Connection, ConnectionImpl } from './connection'
 import { JavaScriptAliveKeeper } from './javaScriptAliveKeeper'
@@ -358,6 +359,9 @@ export class Webnat {
    * 5. 等待结果、超时或被取消
    * 6. 清理资源并返回结果或抛出错误
    *
+   * > 未指定 connection（广播）时，上述流程会对每个连接各执行一次，并按「谁先返回用谁的」
+   * > 竞赛裁决，详见下方 connection 参数说明。
+   *
    * @param func 方法调用描述对象
    * @param func.method 要调用的方法名称
    * @param func.param 方法参数，可以是任意可序列化的对象，可选
@@ -365,7 +369,9 @@ export class Webnat {
    * @param options.timeout 超时时间（毫秒），超时后会自动取消调用并抛出超时错误
    * @param options.onNotification 收到通知时的回调函数，用于接收方法执行过程中的进度或状态更新
    * @param options.signal AbortSignal，用于主动取消调用；若传入时已处于 aborted 状态，立即抛出取消错误（与 Web 端一致）
-   * @param connection 目标连接，如果为 undefined 则选择第一个可用连接
+   * @param connection 目标连接。传入具体连接时只调用该连接；为 undefined 时**广播**给当前所有连接
+   *   （主框架 + 所有 iframe），并按「谁先返回用谁的」裁决：第一个发来 notify / 成功 / 真实业务错误的
+   *   连接获胜，其余被 abort；仅回 unimplemented/closed 的连接不参与获胜，全部如此时才失败
    * @returns Promise，resolve 时返回方法执行结果，reject 时返回错误
    * @throws {WebnatError} 方法执行错误，包括：
    *   - 超时错误（WebnatErrorCode.TIMEOUT）
@@ -413,14 +419,18 @@ export class Webnat {
    * ```
    */
   async method(func: MethodFunc, options?: MethodOptions, connection?: Connection): Promise<ESObject> {
-    const c = connection ?? (() => {
-      const connections = Array.from(this.connections.values());
-      return connections.length > 0 ? connections[0] : undefined;
-    })();
     // 在方法调用期间增加引用，确保 JS 保持活跃
     this.javaScriptAliveKeeper.increaseReference();
     try {
-      const result: ESObject = await this.methodWebnat.method(func, options, c);
+      // 指定了连接：沿用单连接直连语义
+      if (connection) {
+        const result: ESObject = await this.methodWebnat.method(func, options, connection);
+        return result;
+      }
+      // 未指定连接：广播给所有连接（主框架 + 所有 iframe），谁先返回用谁的
+      const call = new BroadcastMethodCall((): void => {
+      });
+      const result: ESObject = await call.start(Array.from(this.connections.values()), this.methodWebnat, func, options);
       return result;
     } finally {
       // 方法调用完成后减少引用

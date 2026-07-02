@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] (2026-07-02)
+
+### Features
+
+- **`Webnat.method` 广播**：未指定 `connection` 调用时，方法调用会**广播给当前所有连接**（主框架 + 所有 iframe），不再只发给任意首个连接。第一个发来「有意义信号」（`notify` / 成功 `reply` / 真实业务错误）的连接获胜，其余子调用立即被 `abort`，之后只透传胜者的通知与最终结果。
+- **广播淘汰语义**：`unimplemented(-1010)` 与 `closed(-1004)` 不会「抢跑」获胜，只把该连接移出候选池；当所有连接都被淘汰时才最终失败——出现过 `closed` 则返回 `closed`，否则返回 `unimplemented`。超时 / 取消作用于整组并 `abort` 全部子调用（子调用本身不设超时）。主要用于「透传 iframe」这一常见场景（同一方法通常只有一个 frame 注册处理器）。
+
+### Note
+
+- 传入具体 `connection` 时，仍保持原有的单连接直连行为。
+
+---
+
 ## [1.0.5] (2026-05-12)
 
 ### Fixed
