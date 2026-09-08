@@ -321,7 +321,7 @@ export class MethodWebnat {
       const listener = this.listeners.get(method);
       if (!listener) { // 方法未实现，返回错误
         const error = WebnatError.unimplemented(method);
-        const replyMessage = Message.reply(connection.id, id, undefined, error);
+        const replyMessage = Message.reply(connection.id, id, undefined, error.toJson() as ESObject);
         (connection as ConnectionImpl).trySend(replyMessage);
         return;
       }
@@ -346,7 +346,9 @@ export class MethodWebnat {
         settled = true;
         clean();
         if (error) {
-          const replyMessage = Message.reply(connection.id, id, undefined, error);
+          // 必须发 toJson()：ArkTS 的 JSON.stringify 不输出 Error 的 message（实测只留声明字段），
+          // 直接塞实例过桥，对端只能拿到 code，message 落到兜底的 "Unknown Error"。
+          const replyMessage = Message.reply(connection.id, id, undefined, error.toJson() as ESObject);
           (connection as ConnectionImpl).trySend(replyMessage);
         } else {
           const replyMessage = Message.reply(connection.id, id, result, undefined);

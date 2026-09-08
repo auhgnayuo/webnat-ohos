@@ -1,1 +1,1 @@
-export const WebnatVersion = '1.2.0';
+export const WebnatVersion = '1.2.1';

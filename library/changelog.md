@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] (2026-09-08)
+
+### Fixed
+
+- **方法回复的错误不再丢 `message`**：`MethodWebnat` 之前把 `WebnatError` 实例直接塞进 reply，而 ArkTS 的 `JSON.stringify` 只序列化类声明字段——`super(message)` 写入的 `message` 会被丢掉（实测 `JSON.stringify(new Error('x'))` 得到 `{}`）。对端因此只收到 `{ code }`，`WebnatError.from` 落到兜底值 `"Unknown Error"`。现改为发送前调 `error.toJson()`，与 Android / Darwin 行为一致。
+
+---
+
 ## [1.2.0] (2026-07-02)
 
 ### Features

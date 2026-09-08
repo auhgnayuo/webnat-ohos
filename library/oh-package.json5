@@ -1,11 +1,15 @@
 
 {
   "name": "webnat",
-  "author": "Auhgnayuo",
-  "version": "1.2.0",
+  "author": {
+    "name": "Auhgnayuo",
+    "url": "https://github.com/auhgnayuo"
+  },
+  "version": "1.2.1",
   "description": "A lightweight WebView-Native bridge library supporting raw messages, broadcast, and RPC.",
   "main": "./Index.ets",
   "license": "MIT",
+  "repository": "https://github.com/auhgnayuo/webnat-ohos.git",
   "dependencies": {
   }
 }
