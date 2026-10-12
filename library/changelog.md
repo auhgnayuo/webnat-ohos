@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] (2026-10-12)
+
+### Features
+
+- **`AbortController` / `AbortSignal` 与 Node.js / Web 标准对齐**：`AbortSignal` 新增 `reason`、`onabort`、`throwIfAborted()`、`addEventListener('abort', listener)` / `removeEventListener`，监听器会收到 `AbortEvent`（`type` / `target`）；`AbortController.abort(reason?)` 支持传入取消原因，缺省为 `name` 为 `AbortError` 的 `Error`。`onMethod` 处理函数里监听取消的写法现在可以与 Web 端一致。新增导出 `AbortEvent`、`AddEventListenerOptions`。
+
+### Deprecated
+
+- `AbortSignal.addListener` / `removeListener` 标记为 `@deprecated`，行为保持不变（包括对已取消的信号立即回调），请迁移到 `addEventListener('abort', …)` / `removeEventListener('abort', …)`。
+
+### Note
+
+- 与标准一致：对**已取消**的信号调用 `addEventListener` 不会再回调，需要先判断 `signal.aborted`；库内调用点已按此处理。
+- 与 Node.js 的差异：监听器抛出的异常会被忽略（Node.js 会作为未捕获异常抛出，其余监听器仍会被调用）；`once` 选项仅为签名兼容（`abort` 事件只会触发一次）；不提供 `dispatchEvent`，也暂未提供 `AbortSignal.abort()` / `timeout()` / `any()` 静态方法。
+
+---
+
 ## [1.2.1] (2026-09-08)
 
 ### Fixed

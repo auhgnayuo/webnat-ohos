@@ -8,11 +8,11 @@
  * - Connection: 连接接口
  * - WebnatError: 错误类
  * - WebnatErrorCode: 错误码枚举
- * - AbortController, AbortSignal: 取消控制器相关
+ * - AbortController, AbortSignal, AbortEvent, AddEventListenerOptions: 取消控制器相关
  * - Message, Param: 消息相关类型
  */
 export { Webnat } from './src/main/ets/webnat'
 export { WebnatVersion } from './src/main/ets/version'
 export type { Connection } from './src/main/ets/connection'
 export { WebnatError, WebnatErrorCode } from './src/main/ets/error'
-export { AbortController, AbortSignal } from './src/main/ets/abortController'
+export { AbortController, AbortSignal, AbortEvent, AddEventListenerOptions } from './src/main/ets/abortController'

@@ -297,7 +297,7 @@ export class Webnat {
    *   notify({ progress: 50 })
    *
    *   // 监听取消事件
-   *   signal.addListener(() => {
+   *   signal.addEventListener('abort', () => {
    *     console.log('Method call cancelled')
    *   })
    *
@@ -558,7 +558,7 @@ export class Webnat {
         // 提取连接元数据（与 Android 等端一致：缺省 param 时用空对象）
         const emptyAttrs: Record<string, ESObject> = {};
         const openMsg = message.open;
-        const paramForAttrs: ESObject | undefined = openMsg.param;
+        const paramForAttrs: ESObject = openMsg.param;
         let attributes: Record<string, ESObject> = emptyAttrs;
         if (paramForAttrs !== undefined) {
           attributes = paramForAttrs as Record<string, ESObject>;

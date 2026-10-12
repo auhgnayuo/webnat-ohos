@@ -30,6 +30,42 @@ export default function methodWebnatTest() {
       });
     });
 
+    it('method_rejects_and_sends_abort_when_signal_aborted_later', 0, (): Promise<void> => {
+      const ac = new AbortController();
+      const mw = new MethodWebnat();
+      const out: Message[] = [];
+      const conn = new ConnectionImpl('conn-1', {}, undefined, async (m: Message): Promise<void> => {
+        out.push(m);
+      });
+      const pending: Promise<ESObject> = mw.method({ method: 'x' }, { signal: ac.signal }, conn);
+      ac.abort();
+      return pending.then((): void => {
+        throw new Error('expected rejection');
+      }).catch((e: Error): void => {
+        expect((e as WebnatError).code).assertEqual(WebnatErrorCode.CANCELLED);
+        expect(out.length).assertEqual(2);
+        expect(out[0].invoke !== undefined).assertEqual(true);
+        expect(out[1].abort !== undefined).assertEqual(true);
+      });
+    });
+
+    it('method_removes_abort_listener_after_completion', 0, (): Promise<void> => {
+      const ac = new AbortController();
+      const mw = new MethodWebnat();
+      const out: Message[] = [];
+      const conn = new ConnectionImpl('conn-1', {}, undefined, async (m: Message): Promise<void> => {
+        out.push(m);
+      });
+      const pending: Promise<ESObject> = mw.method({ method: 'x' }, { signal: ac.signal }, conn);
+      const invokeId = out[0].invoke?.id as string;
+      mw.receive(Message.reply('conn-1', invokeId, 1 as ESObject, undefined), conn);
+      return pending.then((result: ESObject): void => {
+        expect(result as number).assertEqual(1);
+        ac.abort();
+        expect(out.length).assertEqual(1);
+      });
+    });
+
     it('method_rejects_when_connection_undefined', 0, (): Promise<void> => {
       const mw = new MethodWebnat();
       return mw.method({ method: 'x' }, {}, undefined).then((): void => {

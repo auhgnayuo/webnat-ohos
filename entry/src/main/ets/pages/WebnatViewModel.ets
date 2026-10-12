@@ -136,7 +136,7 @@ export class WebnatViewModel {
   /**
    * 格式化消息为字符串
    */
-  private formatMessage(message: ESObject | null | undefined): string {
+  private formatMessage(message: ESObject): string {
     if (message === null || message === undefined) {
       return "null";
     }

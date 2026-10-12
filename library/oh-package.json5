@@ -5,7 +5,7 @@
     "name": "Auhgnayuo",
     "url": "https://github.com/auhgnayuo"
   },
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "A lightweight WebView-Native bridge library supporting raw messages, broadcast, and RPC.",
   "main": "./Index.ets",
   "license": "MIT",

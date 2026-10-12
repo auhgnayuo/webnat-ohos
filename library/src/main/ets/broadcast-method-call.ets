@@ -95,7 +95,7 @@ export class BroadcastMethodCall {
         };
         this.outerSignal = outer;
         this.outerSignalAbort = onAbort;
-        outer.addListener(onAbort);
+        outer.addEventListener('abort', onAbort);
       }
 
       // 组级超时（子调用不再各自设置超时）
@@ -156,7 +156,7 @@ export class BroadcastMethodCall {
   }
 
   /** 处理某连接的最终完成（成功或错误） */
-  private handleComplete(connId: string, result: ESObject | undefined, error: WebnatError | null): void {
+  private handleComplete(connId: string, result: ESObject, error: WebnatError | null): void {
     if (this.settled) {
       return;
     }
@@ -215,7 +215,7 @@ export class BroadcastMethodCall {
   }
 
   /** 终结整组调用：幂等，仅 resolve/reject 一次并触发收尾钩子 */
-  private finish(result: ESObject | undefined, error: WebnatError | null): void {
+  private finish(result: ESObject, error: WebnatError | null): void {
     if (this.settled) {
       return;
     }
@@ -225,7 +225,7 @@ export class BroadcastMethodCall {
       this.timer = undefined;
     }
     if (this.outerSignal && this.outerSignalAbort) {
-      this.outerSignal.removeListener(this.outerSignalAbort);
+      this.outerSignal.removeEventListener('abort', this.outerSignalAbort);
     }
     // abort 所有剩余子调用（胜者的已完成，abort 为 no-op；落败者收到 abort）
     const remaining: AbortController[] = [];

@@ -1,7 +1,7 @@
 /**
  * AbortController - 取消控制器
  *
- * 提供取消异步操作的能力，类似于 Web 标准的 AbortController。
+ * 提供取消异步操作的能力，API 与 Node.js / Web 标准的 AbortController 保持一致。
  *
  * 适用场景：
  * - 需要取消正在执行的方法调用
@@ -12,13 +12,13 @@
  * ```typescript
  * const controller = new AbortController()
  * const signal = controller.signal
- * 
+ *
  * // 在异步操作中监听取消信号
- * signal.addListener(() => {
+ * signal.addEventListener('abort', (event: AbortEvent): void => {
  *   // 执行清理逻辑
  * })
- * 
- * // 取消操作
+ *
+ * // 取消操作，可选传入原因（缺省为 name 为 AbortError 的 Error）
  * controller.abort()
  * ```
  */
@@ -29,47 +29,96 @@ export class AbortController {
   /**
    * 取消操作
    *
-   * 触发取消信号，通知所有监听器操作已被取消。
-   * 多次调用此方法不会产生副作用。
+   * 将信号置为已取消并触发 abort 事件。多次调用只有第一次生效。
+   *
+   * @param reason 取消原因，缺省为 name 为 AbortError 的 Error
    */
-  abort(): void {
-    (this.signal as AbortSignalImpl).abort();
+  abort(reason?: ESObject): void {
+    (this.signal as AbortSignalImpl).abort(reason);
   }
+}
+
+/** abort 事件对象，作为事件监听器的参数传入 */
+export class AbortEvent {
+  /** 事件类型，固定为 'abort' */
+  readonly type: string = 'abort';
+  /** 触发该事件的信号 */
+  readonly target: AbortSignal;
+
+  constructor(target: AbortSignal) {
+    this.target = target;
+  }
+}
+
+/** addEventListener 的选项 */
+export interface AddEventListenerOptions {
+  /** 仅为与 Web 签名兼容：abort 事件只会触发一次，该选项不改变行为 */
+  once?: boolean;
 }
 
 /**
  * AbortSignal - 取消信号接口
  *
- * 表示一个可取消的信号，用于监听取消事件。
- *
- * 特点：
- * - 只读的 aborted 属性，表示是否已取消
- * - addListener 方法用于注册取消监听器
- * - addListener 返回一个取消函数，用于移除监听器
+ * 表示一个可取消的信号，用于监听取消事件。API 与 Node.js / Web 标准的 AbortSignal 保持一致。
+ * 与标准一致：对已处于取消状态的信号注册监听器不会触发回调，请先判断 aborted。
  */
 export interface AbortSignal {
+  /** 是否已取消，只读属性 */
+  readonly aborted: boolean;
+
+  /** 取消原因，未取消时为 undefined，只读属性 */
+  readonly reason: ESObject;
+
+  /** 取消时的事件处理函数，与通过 addEventListener 注册的监听器按首次设置的先后顺序调用 */
+  onabort: ((event: AbortEvent) => void) | null;
+
   /**
    * 注册取消监听器
    *
-   * 注册一个监听器，当操作被取消时会调用该监听器。
-   * 如果信号已经处于取消状态，监听器会立即被调用。
+   * 重复注册同一个监听器只会生效一次；type 仅支持 'abort'，其他类型会被忽略。
    *
+   * @param type 事件类型，固定为 'abort'
    * @param listener 取消时的监听器
-   * @returns 返回一个函数，调用该函数可以移除监听器
+   * @param options 监听选项
+   */
+  addEventListener(type: string, listener: (event: AbortEvent) => void, options?: AddEventListenerOptions): void;
+
+  /**
+   * 移除取消监听器
+   *
+   * @param type 事件类型，固定为 'abort'
+   * @param listener 要移除的监听器（必须与注册时的引用完全相同）
+   */
+  removeEventListener(type: string, listener: (event: AbortEvent) => void): void;
+
+  /**
+   * 若信号已取消，则抛出 reason
+   */
+  throwIfAborted(): void;
+
+  /**
+   * 注册取消监听器
+   *
+   * 与 addEventListener 不同：如果信号已经处于取消状态，监听器会立即被调用。
+   *
+   * @deprecated 请使用 addEventListener('abort', listener)
+   * @param listener 取消时的监听器
    */
   addListener(listener: () => void): void;
 
   /**
    * 移除取消监听器
    *
-   * 从监听器集合中移除指定的监听器
-   *
+   * @deprecated 请使用 removeEventListener('abort', listener)
    * @param listener 要移除的监听器（必须与注册时的引用完全相同）
    */
   removeListener(listener: () => void): void;
+}
 
-  /** 是否已取消，只读属性 */
-  readonly aborted: boolean;
+function createAbortError(): Error {
+  const error = new Error('This operation was aborted');
+  error.name = 'AbortError';
+  return error;
 }
 
 /**
@@ -78,65 +127,99 @@ export interface AbortSignal {
  * 实现 AbortSignal 接口，提供取消信号的具体功能。
  */
 class AbortSignalImpl implements AbortSignal {
-  /** 监听器集合，存储所有注册的取消监听器 */
-  private listeners: Set<() => void> = new Set();
-  /** 是否已取消 */
   aborted: boolean = false;
+  reason: ESObject = undefined;
+  /** 有序的监听器集合，onabort 与 addListener 的适配函数也在其中 */
+  private listeners: Set<(event: AbortEvent) => void> = new Set();
+  /** addListener 注册的原始监听器 -> 适配函数，供 removeListener 查找 */
+  private legacyListeners: Map<() => void, (event: AbortEvent) => void> = new Map();
+  private handler: ((event: AbortEvent) => void) | null = null;
+  private handlerAttached: boolean = false;
 
-  /**
-   * 注册取消监听器
-   *
-   * 如果信号已经处于取消状态，监听器会立即被调用。
-   * 否则，监听器会被注册到监听器集合中。
-   *
-   * @param listener 取消时的监听器
-   */
-  addListener(listener: () => void): void {
-    if (this.aborted) {
-      // 如果已经取消，立即调用监听器
-      listener();
-      // 返回一个空函数，因为监听器已经被调用，不需要移除
+  get onabort(): ((event: AbortEvent) => void) | null {
+    return this.handler;
+  }
+
+  set onabort(value: ((event: AbortEvent) => void) | null) {
+    this.handler = value;
+    // 首次设置时占位，之后重新赋值不改变它在监听器中的顺序
+    if (value !== null && !this.handlerAttached && !this.aborted) {
+      this.handlerAttached = true;
+      this.listeners.add((event: AbortEvent): void => {
+        const current = this.handler;
+        if (current !== null) {
+          current(event);
+        }
+      });
+    }
+  }
+
+  addEventListener(type: string, listener: (event: AbortEvent) => void): void {
+    // 已取消的信号不会再触发事件，无需保留监听器
+    if (type !== 'abort' || this.aborted) {
       return;
     }
-    // 注册监听器到集合
     this.listeners.add(listener);
   }
 
-  /**
-   * 移除取消监听器
-   *
-   * 从监听器集合中移除指定的监听器
-   *
-   * @param listener 要移除的监听器（必须与注册时的引用完全相同）
-   */
-  removeListener(listener: () => void): void {
-    this.listeners.delete(listener);
+  removeEventListener(type: string, listener: (event: AbortEvent) => void): void {
+    if (type === 'abort') {
+      this.listeners.delete(listener);
+    }
   }
 
-  /**
-   * 取消操作
-   *
-   * 标记信号为已取消状态，并通知所有注册的监听器。
-   * 多次调用此方法不会产生副作用。
-   */
-  abort(): void {
+  throwIfAborted(): void {
     if (this.aborted) {
-      // 已经取消，直接返回
+      throw this.reason as Error;
+    }
+  }
+
+  addListener(listener: () => void): void {
+    if (this.aborted) {
+      listener();
       return;
     }
-    // 标记为已取消
+    if (this.legacyListeners.has(listener)) {
+      return;
+    }
+    const adapter: (event: AbortEvent) => void = (): void => {
+      listener();
+    };
+    this.legacyListeners.set(listener, adapter);
+    this.listeners.add(adapter);
+  }
+
+  removeListener(listener: () => void): void {
+    const adapter = this.legacyListeners.get(listener);
+    if (adapter !== undefined) {
+      this.legacyListeners.delete(listener);
+      this.listeners.delete(adapter);
+    }
+  }
+
+  abort(reason?: ESObject): void {
+    if (this.aborted) {
+      return;
+    }
     this.aborted = true;
-    // 获取所有监听器的副本（避免在遍历时修改集合）
-    const fns = this.listeners;
-    // 通知所有监听器
-    for (const fn of fns) {
+    this.reason = reason !== undefined ? reason : createAbortError();
+    const event = new AbortEvent(this);
+    const snapshot: Array<(event: AbortEvent) => void> = [];
+    this.listeners.forEach((listener: (event: AbortEvent) => void): void => {
+      snapshot.push(listener);
+    });
+    for (const listener of snapshot) {
+      // 被前面的监听器移除的不再调用
+      if (!this.listeners.has(listener)) {
+        continue;
+      }
       try {
-        fn();
+        listener(event);
       } catch {
         // 忽略监听器错误，确保所有监听器都能被调用
       }
     }
-    // 清空监听器集合
     this.listeners.clear();
+    this.legacyListeners.clear();
   }
 }

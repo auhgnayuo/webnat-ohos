@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@ohos/hypium';
+import { AbortController } from '../main/ets/abortController';
 import { BroadcastMethodCall } from '../main/ets/broadcast-method-call';
 import { ConnectionImpl } from '../main/ets/connection';
 import { WebnatError, WebnatErrorCode } from '../main/ets/error';
@@ -112,6 +113,23 @@ export default function broadcastMethodCallTest() {
       }).then((result: ESObject): void => {
         expect(notified as string).assertEqual('p');
         expect(result as number).assertEqual(1);
+      });
+    });
+
+    // 外部 signal 在发起后被取消：整组以 cancelled 结束
+    it('broadcast_rejects_cancelled_when_outer_signal_aborted_later', 0, (): Promise<void> => {
+      const mw = new MethodWebnat();
+      const conn1 = new ConnectionImpl('c1', {}, undefined, async (): Promise<void> => {
+      });
+      const ac = new AbortController();
+      const call = new BroadcastMethodCall((): void => {
+      });
+      const pending: Promise<ESObject> = call.start([conn1], mw, { method: 'm' }, { signal: ac.signal });
+      ac.abort();
+      return pending.then((): void => {
+        throw new Error('expected rejection');
+      }).catch((e: Error): void => {
+        expect((e as WebnatError).code).assertEqual(WebnatErrorCode.CANCELLED);
       });
     });
 

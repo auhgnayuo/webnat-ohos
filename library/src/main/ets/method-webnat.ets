@@ -193,9 +193,9 @@ export class MethodWebnat {
             onComplete(undefined, WebnatError.cancelled());
             void conn.trySend(Message.abort(connection.id, id));
           };
-          signal.addListener(abort);
+          signal.addEventListener('abort', abort);
           cancelAbort = (): void => {
-            signal.removeListener(abort);
+            signal.removeEventListener('abort', abort);
           };
         }
 
@@ -339,7 +339,7 @@ export class MethodWebnat {
         }
       };
 
-      const complete = (result: ESObject | undefined, error: WebnatError | null): void => {
+      const complete = (result: ESObject, error: WebnatError | null): void => {
         if (settled) {
           return;
         }
