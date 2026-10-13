@@ -25,6 +25,7 @@ import { AbortSignal } from './abortController'
 import { BroadcastMethodCall } from './broadcast-method-call'
 import { BroadcastWebnat } from './broadcast-webnat'
 import { Connection, ConnectionImpl } from './connection'
+import { WebnatError } from './error'
 import { JavaScriptAliveKeeper } from './javaScriptAliveKeeper'
 import { Message } from './message'
 import { MethodFunc, MethodOptions, MethodWebnat } from './method-webnat'
@@ -125,6 +126,34 @@ export class Webnat {
    */
   getConnections(): Map<string, Connection> {
     return new Map(this.connections);
+  }
+
+  /**
+   * 渲染进程已退出
+   *
+   * 宿主在 Web 组件的 `onRenderExited` 触发时调用；页面销毁之前（如 `aboutToDisappear`）也调用一次。
+   * 页面崩溃或被销毁时无法再发送 CLOSE，Webnat 据此自行结束该页面的所有连接：待完成的 `method` 调用
+   * 以 `CLOSED` 失败，正在执行的 method handler 收到取消。不会向页面发送任何消息，Webnat 仍可继续使用，
+   * 页面重新加载后会照常建立新连接。可重复调用。
+   *
+   * @example
+   * ```typescript
+   * Web({ src: 'https://example.com', controller: this.controller })
+   *   .onRenderExited(() => {
+   *     Webnat.of(this.controller).onRenderExited()
+   *   })
+   * ```
+   */
+  onRenderExited(): void {
+    // 先把所有连接标记并移除，再逐个通知：回调里看到的是已经全部关闭的状态
+    const closing: Connection[] = Array.from(this.connections.values());
+    this.connections.clear();
+    closing.forEach((connection: Connection): void => {
+      (connection as ConnectionImpl).dispose();
+    });
+    closing.forEach((connection: Connection): void => {
+      this.onConnectionClose(connection);
+    });
   }
 
   // MARK: - 原始消息 API
@@ -570,12 +599,18 @@ export class Webnat {
           const controller = this.getWebController();
           if (!controller) {
             // Controller 已被回收，无法发送消息
-            return;
+            throw WebnatError.closed();
           }
+          let string: string = '';
           try {
             // 与 Android 端一致：必须序列化协议字典，不能对 Message 类实例直接 JSON.stringify，
             // 否则会产生占位字段（如 raw: {} / param: null），Web 端会把 raw 判为真并误触发 onRaw。
-            const string = JSON.stringify([messageToSend.toDictionary()]);
+            string = JSON.stringify([messageToSend.toDictionary()]);
+          } catch (error) {
+            // 参数无法序列化：让等待它的 method() 立即失败，而不是吞掉
+            throw WebnatError.serializationFailed(error as ESObject);
+          }
+          try {
             // 转义特殊字符，确保可以安全地嵌入到 JavaScript 单引号字符串中
             // const escapedString = string.replace(/\\/g, '\\\\')
             //   .replace(/'/g, "\\'")
@@ -590,7 +625,8 @@ export class Webnat {
             const js = `window.__web_webnat__.receive(...${string})`;
             await controller.runJavaScript(js);
           } catch (error) {
-            // 忽略发送错误
+            // 平台报告的投递失败照实抛出；raw / broadcast 等走 trySend，仍然静默
+            throw WebnatError.from(error as ESObject) ?? WebnatError.closed();
           }
         });
         // 保存连接并通知所有代理

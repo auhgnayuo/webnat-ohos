@@ -17,9 +17,6 @@
       },
       {
         "name": "ohos.permission.INTERNET"
-      },
-      {
-        "name": "ohos.permission.LINKTURBO"
       }
     ],
     "deliveryWithInstall": true,

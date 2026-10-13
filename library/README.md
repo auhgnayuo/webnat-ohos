@@ -29,7 +29,7 @@ Or add to your `oh-package.json5`:
 ```json5
 {
   "dependencies": {
-    "webnat": "1.3.0"
+    "webnat": "1.4.0"
   }
 }
 ```
@@ -129,6 +129,26 @@ webnat.onMethod("getUserInfo", async (
     name: "User"
   };
 });
+```
+
+### 4. Send failures and handler errors
+
+- A failed send is visible to the caller that waits for it: `method` rejects at once with `SERIALIZATION_FAILED` when the parameter cannot be serialized, and with `CLOSED` when the `WebviewController` is gone or the connection is closed. An error reported by `runJavaScript` rejects the call with that error. `raw` and `broadcast` stay fire-and-forget.
+- A method handler that fails (throws, or rejects) is answered with an error reply `{ code, message }` (code -1 for an error without one), so the caller never waits for its timeout because of a handler bug. A result that cannot be serialized is answered with `SERIALIZATION_FAILED`.
+
+### 5. Page crash and teardown
+
+When a page unloads normally, the Web SDK sends CLOSE and Webnat ends that connection. A crashed render process or a destroyed `WebviewController` never gets to send it, so forward the event to Webnat: call `Webnat.of(this.controller).onRenderExited()` from the Web component's own `onRenderExited`, and once more before you drop the `WebviewController`. Webnat then ends the page's connections itself: pending `method` calls reject with `CLOSED` and running method handlers are aborted. Nothing is sent to the page, and Webnat stays usable, so a reloaded page opens new connections as usual.
+
+```typescript
+Web({ src: 'https://example.com', controller: this.controller })
+  .onRenderExited(() => {
+    Webnat.of(this.controller).onRenderExited();
+  })
+
+aboutToDisappear() {
+  Webnat.of(this.controller).onRenderExited();
+}
 ```
 
 ## License

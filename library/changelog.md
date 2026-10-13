@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] (2026-10-13)
+
+### Features
+
+- **`onRenderExited()`**：宿主在渲染进程退出时通知 Webnat，Webnat 据此自行结束该页面的所有连接。页面崩溃或被销毁时无法再发送 CLOSE，调用后连接标记为已关闭并从 `getConnections()` 移除，这些连接上待完成的 `method` 调用以 `CLOSED` 失败，正在执行的 method handler 收到取消；不会向页面发送消息，Webnat 实例仍可继续使用，页面重新加载后会照常建立新连接。Android / Darwin / OHOS / Electron 同语义。方法名取各平台自己的回调名：Darwin 为 `webViewWebContentProcessDidTerminate`，Android 和 Electron 为 `onRenderProcessGone`，OHOS 为 `onRenderExited`。调用点：Web 组件自己的 `onRenderExited`，以及丢弃 `WebviewController` 之前（如 `aboutToDisappear`）。
+
+### Fixed
+
+- **同步抛出的 handler 异常现在会回复错误**：`onMethod` 的处理函数在返回 Promise 之前同步抛出时，之前不会产生回复，调用方只能等到超时；现在与 Promise reject 一样回复 `{ code, message }`（没有 code 的错误为 -1）。
+- **发送失败不再被吞掉**：参数无法序列化时 `method` 立即以 `SERIALIZATION_FAILED(-1012)` 失败，`WebviewController` 已被回收时以 `CLOSED` 失败，`runJavaScript` 报告的错误会让调用以该错误失败。`raw` / `broadcast` 等仍是 `trySend`，保持静默。
+- **无法序列化的方法结果不再被丢弃**：handler 返回的结果无法序列化时，回复 `SERIALIZATION_FAILED` 错误，而不是让调用方等到超时。
+
+---
+
 ## [1.3.0] (2026-10-12)
 
 ### Features

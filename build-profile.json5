@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/auhgnayuo/.ohos/config/default_webnat_ohos_ULgJcsYCov-7FA11JwRGGK2v8hozji5yT9hDKW-hhiw=.cer",
+          "certpath": "/Users/auhgnayuo/.ohos/config/default_webnat-ohos_dCCVomwLJ64vF_7bGQLLqio_kjbYINKFo-HoKibAgu0=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001AC1CB1DBF6E76DF4EC5AC5B749A1B3DB8FC3B0340C15B50FB14E1104C3722727185E562C6D4D2",
-          "profile": "/Users/auhgnayuo/.ohos/config/default_webnat_ohos_ULgJcsYCov-7FA11JwRGGK2v8hozji5yT9hDKW-hhiw=.p7b",
+          "keyPassword": "0000001BA8EC90859105A1228B287EC7BEFA8A6A55F36F7873BF20FD55FDF19C970EFC7D45E56DCD08F16C",
+          "profile": "/Users/auhgnayuo/.ohos/config/default_webnat-ohos_dCCVomwLJ64vF_7bGQLLqio_kjbYINKFo-HoKibAgu0=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/auhgnayuo/.ohos/config/default_webnat_ohos_ULgJcsYCov-7FA11JwRGGK2v8hozji5yT9hDKW-hhiw=.p12",
-          "storePassword": "0000001A25207AAF243904C8B20533A15097B7F4CEED7E11523D85825CD9DA7BAEE2701B644D8DC5CD37"
+          "storeFile": "/Users/auhgnayuo/.ohos/config/default_webnat-ohos_dCCVomwLJ64vF_7bGQLLqio_kjbYINKFo-HoKibAgu0=.p12",
+          "storePassword": "0000001B29A2F0B436AF85D577647FD07B7107B3FE2A47432596E805BDF5D9F36FB118B4CF53C25428BC1C"
         }
       }
     ],

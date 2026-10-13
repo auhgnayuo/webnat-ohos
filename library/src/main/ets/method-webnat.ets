@@ -351,8 +351,14 @@ export class MethodWebnat {
           const replyMessage = Message.reply(connection.id, id, undefined, error.toJson() as ESObject);
           (connection as ConnectionImpl).trySend(replyMessage);
         } else {
-          const replyMessage = Message.reply(connection.id, id, result, undefined);
-          (connection as ConnectionImpl).trySend(replyMessage);
+          const conn = connection as ConnectionImpl;
+          conn.send(Message.reply(connection.id, id, result, undefined)).catch((err: ESObject): void => {
+            // 结果无法序列化时回复错误，否则调用方只能等到超时
+            const w = WebnatError.from(err);
+            if (w !== null && w.code === WebnatErrorCode.SERIALIZATION_FAILED) {
+              conn.trySend(Message.reply(connection.id, id, undefined, w.toJson() as ESObject));
+            }
+          });
         }
       };
 
@@ -387,13 +393,14 @@ export class MethodWebnat {
         (connection as ConnectionImpl).trySend(notifyMessage);
       };
 
-      const listenerPromise: Promise<ESObject> = listener(param, abortController.signal, notify, connection);
-      await listenerPromise.then((result: ESObject): void => {
+      // await 放在 try 里（与 Web SDK 一致）：同步抛出的异常与 Promise reject 一样回复错误
+      try {
+        const result: ESObject = await listener(param, abortController.signal, notify, connection);
         complete(result, null);
-      }).catch((err: ESObject): void => {
-        const w = WebnatError.from(err);
+      } catch (err) {
+        const w = WebnatError.from(err as ESObject);
         complete(undefined, w ?? new WebnatError(WebnatErrorCode.UNKNOWN, 'Unknown Error'));
-      });
+      }
       return;
     }
   }

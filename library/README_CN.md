@@ -29,7 +29,7 @@ ohpm install webnat
 ```json5
 {
   "dependencies": {
-    "webnat": "1.3.0"
+    "webnat": "1.4.0"
   }
 }
 ```
@@ -138,6 +138,26 @@ webnat.onMethod("getUserInfo", async (
     name: "User"
   };
 });
+```
+
+### 4. 发送失败与 handler 错误
+
+- 发送失败会让等待它的调用方知道：参数无法序列化时，`method` 立即以 `SERIALIZATION_FAILED` 失败；`WebviewController` 已不存在或连接已关闭时以 `CLOSED` 失败。`runJavaScript` 报告的错误会让调用以该错误失败。`raw`、`broadcast` 仍是发出即忘。
+- method handler 失败（抛出异常或 reject）时，对端会收到错误回复 `{ code, message }`（没有 code 的错误为 -1），不会因 handler 的 bug 一直等到超时。结果无法序列化时，回复 `SERIALIZATION_FAILED`。
+
+### 5. 页面崩溃与销毁
+
+页面正常卸载时，Web SDK 会发送 CLOSE，Webnat 随之结束该连接。渲染进程崩溃或 `WebviewController` 被销毁时页面没有机会发送，请把事件转给 Webnat：在 Web 组件自己的 `onRenderExited` 里调用 `Webnat.of(this.controller).onRenderExited()`，丢弃 `WebviewController` 之前也调用一次。Webnat 会自行结束该页面的所有连接：待完成的 `method` 调用以 `CLOSED` 失败，正在执行的 method handler 收到取消。不会向页面发送任何消息，Webnat 仍可继续使用，页面重新加载后会照常建立新连接。
+
+```typescript
+Web({ src: 'https://example.com', controller: this.controller })
+  .onRenderExited(() => {
+    Webnat.of(this.controller).onRenderExited();
+  })
+
+aboutToDisappear() {
+  Webnat.of(this.controller).onRenderExited();
+}
 ```
 
 ## 协议
