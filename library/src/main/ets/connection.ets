@@ -22,6 +22,7 @@ export interface Connection {
   readonly id: string;
 
   /** 连接的元数据，在连接建立时由 Web 端传递，包含连接的附加信息 */
+  /** JSON 兼容的连接数据，嵌套 null 保留；不接收数组或基本类型作为属性对象。 */
   readonly attributes?: Record<string, ESObject>;
 
   /** 当前连接的界面 URL，在连接建立时当前页面的地址 */

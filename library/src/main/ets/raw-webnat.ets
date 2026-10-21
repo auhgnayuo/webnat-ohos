@@ -29,7 +29,7 @@ export class RawWebnat {
    * 如果同一个监听器引用已存在，则先移除旧的再添加新的。
    *
    * @param listener 消息监听回调
-   * @param listener.param 接收到的消息内容，可以是任意可序列化的对象
+   * @param listener.param 接收到的消息内容，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）
    * @param listener.connection 消息来源的连接对象
    */
   on = (listener: (param: ESObject, connection: Connection) => void) => {
@@ -57,7 +57,7 @@ export class RawWebnat {
    *
    * 将消息包装为 Message 格式后发送到 Web 端。
    *
-   * @param param 消息体，可以是任意可序列化的对象（String、Number、Object、Array 等）
+   * @param param 消息体，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）（String、Number、Object、Array 等）
    * @param connection 目标连接，如果连接已关闭则不会发送
    */
   raw = (param: ESObject, connection: Connection): void => {

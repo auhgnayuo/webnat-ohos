@@ -1,3 +1,4 @@
+import { createMethodWebnatForTest } from './test-fixtures';
 import { describe, expect, it } from '@ohos/hypium';
 import { AbortController } from '../main/ets/abortController';
 import { BroadcastMethodCall } from '../main/ets/broadcast-method-call';
@@ -11,7 +12,7 @@ export default function broadcastMethodCallTest() {
 
     // 无连接：立即以 closed 结束
     it('broadcast_empty_returns_closed', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const call = new BroadcastMethodCall((): void => {
       });
       return call.start([], mw, { method: 'm' }, undefined).then((): void => {
@@ -23,7 +24,7 @@ export default function broadcastMethodCallTest() {
 
     // 仅一个 frame 实现该方法，其余回 unimplemented：应取实现者的结果
     it('broadcast_success_among_unimplemented', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const dummy = new ConnectionImpl('dummy', {}, undefined, async (): Promise<void> => {
       });
       const conn1 = new ConnectionImpl('c1', {}, undefined, async (m: Message): Promise<void> => {
@@ -45,7 +46,7 @@ export default function broadcastMethodCallTest() {
 
     // 所有 frame 都未实现：最终返回 unimplemented
     it('broadcast_all_unimplemented_returns_unimplemented', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const dummy = new ConnectionImpl('dummy', {}, undefined, async (): Promise<void> => {
       });
       const mk = (id: string): ConnectionImpl => {
@@ -66,7 +67,7 @@ export default function broadcastMethodCallTest() {
 
     // 首个有意义响应是真实业务错误：直接以该错误获胜
     it('broadcast_real_error_wins', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const dummy = new ConnectionImpl('dummy', {}, undefined, async (): Promise<void> => {
       });
       const conn1 = new ConnectionImpl('c1', {}, undefined, async (m: Message): Promise<void> => {
@@ -90,7 +91,7 @@ export default function broadcastMethodCallTest() {
 
     // 胜者的 notify 应被透传；最终返回胜者结果
     it('broadcast_notify_forwarded_from_winner', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const dummy = new ConnectionImpl('dummy', {}, undefined, async (): Promise<void> => {
       });
       const conn1 = new ConnectionImpl('c1', {}, undefined, async (m: Message): Promise<void> => {
@@ -118,7 +119,7 @@ export default function broadcastMethodCallTest() {
 
     // 外部 signal 在发起后被取消：整组以 cancelled 结束
     it('broadcast_rejects_cancelled_when_outer_signal_aborted_later', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const conn1 = new ConnectionImpl('c1', {}, undefined, async (): Promise<void> => {
       });
       const ac = new AbortController();
@@ -135,7 +136,7 @@ export default function broadcastMethodCallTest() {
 
     // 组级超时：无人回复时以 timeout 结束
     it('broadcast_group_timeout', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const conn1 = new ConnectionImpl('c1', {}, undefined, async (): Promise<void> => {
       });
       const conn2 = new ConnectionImpl('c2', {}, undefined, async (): Promise<void> => {

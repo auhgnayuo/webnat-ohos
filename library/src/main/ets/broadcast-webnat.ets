@@ -40,7 +40,7 @@ export class BroadcastWebnat {
    *
    * @param name 广播事件名称，用于标识不同的事件类型
    * @param listener 接收到广播时的回调函数
-   * @param listener.param 广播携带的参数，可以是任意可序列化的对象
+   * @param listener.param 广播携带的参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）
    * @param listener.connection 消息来源的连接对象
    */
   on = (name: string, listener: (param: ESObject, connection: Connection) => void) => {
@@ -86,7 +86,7 @@ export class BroadcastWebnat {
    * 向单个连接发送广播消息。全量广播由 `Webnat.broadcast` 在上层遍历连接并重复调用本方法实现。
    *
    * @param name 广播事件名称，用于标识事件类型
-   * @param params 广播参数，可以是任意可序列化的对象，可选
+   * @param params 广播参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message），可选
    * @param connection 目标连接，未传时不发送
    */
   broadcast = (name: string, params?: ESObject, connection?: Connection): void => {

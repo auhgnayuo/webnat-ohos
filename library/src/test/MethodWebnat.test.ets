@@ -1,3 +1,4 @@
+import { createMethodWebnatForTest } from './test-fixtures';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@ohos/hypium';
 import { AbortController } from '../main/ets/abortController';
 import { ConnectionImpl } from '../main/ets/connection';
@@ -19,7 +20,7 @@ export default function methodWebnatTest() {
     it('method_rejects_when_signal_already_aborted', 0, (): Promise<void> => {
       const ac = new AbortController();
       ac.abort();
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (_m: Message): Promise<void> => {
       });
       return mw.method({ method: 'x' }, { signal: ac.signal }, conn).then((): void => {
@@ -32,7 +33,7 @@ export default function methodWebnatTest() {
 
     it('method_rejects_and_sends_abort_when_signal_aborted_later', 0, (): Promise<void> => {
       const ac = new AbortController();
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const out: Message[] = [];
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (m: Message): Promise<void> => {
         out.push(m);
@@ -51,7 +52,7 @@ export default function methodWebnatTest() {
 
     it('method_removes_abort_listener_after_completion', 0, (): Promise<void> => {
       const ac = new AbortController();
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const out: Message[] = [];
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (m: Message): Promise<void> => {
         out.push(m);
@@ -67,7 +68,7 @@ export default function methodWebnatTest() {
     });
 
     it('method_rejects_when_connection_undefined', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       return mw.method({ method: 'x' }, {}, undefined).then((): void => {
         throw new Error('expected rejection');
       }).catch((e: Error): void => {
@@ -77,7 +78,7 @@ export default function methodWebnatTest() {
     });
 
     it('method_rejects_when_send_fails', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (): Promise<void> => {
         throw WebnatError.closed();
       });
@@ -91,7 +92,7 @@ export default function methodWebnatTest() {
     });
 
     it('receive_invoke_unimplemented_sends_reply_error', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const out: Message[] = [];
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (m: Message): Promise<void> => {
         out.push(m);
@@ -108,7 +109,7 @@ export default function methodWebnatTest() {
     });
 
     it('receive_invoke_success_sends_reply', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       mw.on('echo', async (_p: ESObject, _s, _n, _c): Promise<ESObject> => {
         const r: Record<string, ESObject> = {};
         r['v'] = 1 as ESObject;
@@ -129,7 +130,7 @@ export default function methodWebnatTest() {
     });
 
     it('receive_invoke_handler_throws_synchronously_sends_reply_error', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       mw.on('throws_sync', (_p: ESObject, _s, _n, _c): Promise<ESObject> => {
         throw new Error('boom');
       });
@@ -160,7 +161,7 @@ export default function methodWebnatTest() {
     });
 
     it('method_rejects_with_the_serialization_error_of_the_send', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (): Promise<void> => {
         throw WebnatError.serializationFailed('BigInt');
       });
@@ -172,7 +173,7 @@ export default function methodWebnatTest() {
     });
 
     it('receive_invoke_unserializable_result_sends_serialization_failed_reply', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       mw.on('big', async (_p: ESObject, _s, _n, _c): Promise<ESObject> => {
         return 1 as ESObject;
       });
@@ -185,7 +186,7 @@ export default function methodWebnatTest() {
         };
       });
       const conn = new ConnectionImpl('conn-1', {}, undefined, async (m: Message): Promise<void> => {
-        if (m.reply !== undefined && m.reply.result !== undefined) {
+        if (m.reply !== undefined && m.reply.result !== undefined && m.reply.result !== null) {
           throw WebnatError.serializationFailed('BigInt');
         }
         out.push(m);
@@ -198,14 +199,14 @@ export default function methodWebnatTest() {
       }).then((): void => {
         expect(out.length).assertEqual(1);
         expect(out[0].reply?.id).assertEqual('rid-5');
-        expect(out[0].reply?.result === undefined).assertEqual(true);
+        expect(out[0].reply?.result === null).assertEqual(true);
         const err = WebnatError.from(out[0].reply?.error as ESObject);
         expect(err?.code).assertEqual(WebnatErrorCode.SERIALIZATION_FAILED);
       });
     });
 
     it('receive_invoke_send_failure_other_than_serialization_gets_no_fallback_reply', 0, (): Promise<void> => {
-      const mw = new MethodWebnat();
+      const mw = createMethodWebnatForTest();
       mw.on('gone', async (_p: ESObject, _s, _n, _c): Promise<ESObject> => {
         return 1 as ESObject;
       });

@@ -1,0 +1,31 @@
+name: Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 contracts/verify.py
+  sdk-tests:
+    # Never run an untrusted fork automatically on a persistent SDK host.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, webnat-ohos-sdk]
+    environment: ohos-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contract and Hypium suites (verify result report, not only build status)
+        run: ./scripts/test.sh
+      - name: Build HAR
+        run: hvigorw --mode module -p module=library@default -p product=default assembleHar --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ohos-test-reports
+          path: library/.test/default/outputs/test/reports/

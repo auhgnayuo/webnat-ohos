@@ -1,3 +1,5 @@
+import sharedContractsTest from './SharedContracts.test';
+import jsonValueTest from './JsonValue.test';
 import abortControllerTest from './AbortController.test';
 import broadcastMethodCallTest from './BroadcastMethodCall.test';
 import broadcastWebnatTest from './BroadcastWebnat.test';
@@ -9,6 +11,8 @@ import webnatTest from './Webnat.test';
 export default function testsuite() {
   abortControllerTest();
   localUnitTest();
+  sharedContractsTest();
+  jsonValueTest();
   connectionTest();
   methodWebnatTest();
   webnatTest();

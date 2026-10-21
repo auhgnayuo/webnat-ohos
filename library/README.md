@@ -29,7 +29,7 @@ Or add to your `oh-package.json5`:
 ```json5
 {
   "dependencies": {
-    "webnat": "1.4.0"
+    "webnat": "2.0.0"
   }
 }
 ```
@@ -43,6 +43,33 @@ Webnat requires a Web-side implementation and also supports other Native platfor
 | Web (JavaScript/TypeScript) | [webnat-web](https://github.com/auhgnayuo/webnat-web) |
 | iOS / macOS (Swift) | [webnat-darwin](https://github.com/auhgnayuo/webnat-darwin) |
 | Android (Kotlin) | [webnat-android](https://github.com/auhgnayuo/webnat-android) |
+
+## 2.0.0 Data Contract and Migration
+
+Payloads, results, and notifications accept only JSON-compatible data: null, strings, booleans,
+finite numbers, plain string-keyed records, and arrays, recursively. Objects use
+`Record<string, ESObject>` and arrays use `ESObject[]`; ESObject is an interoperability carrier,
+not permission to send arbitrary classes. JavaScript Map is not a JSON object.
+
+Map, Set, Date, class instances, functions, symbol keys, accessors, hidden fields, non-finite numbers, circular references, and nested
+undefined are rejected. Encoding recursively validates and copies values without invoking toJSON /
+toString. JSON.stringify not throwing is not sufficient validation.
+
+Missing top-level payload fields and explicit JSON null both become native null. Top-level null
+fields remain omitted; nested null dictionary keys and array positions are preserved, as are
+empty string keys and special JSON keys such as __proto__.
+Connection attributes accept objects only; null, arrays, and scalar connection parameters use an empty object instead.
+
+Invalid sends follow the existing failure semantics: method rejects with SERIALIZATION_FAILED;
+invalid method results produce that error reply. Raw / broadcast use trySend and remain silent,
+but never transmit implicitly rewritten data. Message.from rejects the entire invalid message.
+
+### Tests
+
+Run `./scripts/test.sh` to execute all local tests in the DevEco / Hvigor ArkTS SDK previewer.
+The script verifies the Hypium report as well as the build exit code, so failures / timeouts cannot
+be mistaken for success. Requires hvigorw, Python 3, and the SDK; override HVIGORW / NODE_HOME as needed.
+System APIs are mocked in the previewer; real-device Web component integration tests remain separate.
 
 ## Usage
 
@@ -154,3 +181,11 @@ aboutToDisappear() {
 ## License
 
 This project is licensed under the MIT License.
+
+## Shared regression contracts
+
+See `contracts/README.md` for versioned golden fixtures and `contracts/CI.md` for test gates and runner setup.
+
+## Release
+
+Manual release instructions and migration notes: `RELEASING.md`. Upgrade the Web SDK and native bridge together to 2.0.0.

@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [2.0.0] - 2026-10-21
+
+This is a coordinated **major / breaking release** across Web, Electron, Darwin, Android and OHOS. Upgrade both sides of the bridge together; migration and manual publishing instructions are in `RELEASING.md`. Contract fixtures v1 are frozen for this release.
+
+### Shared contract / regression gates
+
+- Added versioned golden message, rejection and error fixtures shared by all five implementations, digest verification and a cross-repository drift/interop gate.
+- Unified error aliases, code 0, signed 32-bit / whole-string parsing and empty/null message behavior. Web errors now inherit Error.
+- PR test workflows now execute tests rather than build-only checks. OHOS SDK execution requires an approved isolated self-hosted runner; device tests remain distinct from local tests.
+
+- Native-to-Web scripts now parse quoted JSON text before receive instead of evaluating JSON as JavaScript object literals. This preserves __proto__ data fields and keeps the strict Web decoder compatible.
+
+### Changed (Breaking)
+
+- 业务数据仅接受 null、string、boolean、有限 number、普通 Record 和数组，递归遵循同一约定。Map、Set、Date、类实例、函数、Symbol 键、访问器、隐藏字段、循环引用和嵌套 undefined 明确拒绝，不依赖 JSON.stringify 的隐式转换。
+- 缺失参数和显式 JSON null 对外统一为 null；顶层 null 省略字段，嵌套空值保留键和数组位置。连接属性只使用对象，其他参数类型使用空对象。
+
+### Refactored
+
+- 双向转换提取为独立的 toJsonValue / fromJsonValue 工具；拒绝整条非法消息，不跳过非法元素；复制对象时保留空字符串键和 __proto__，不修改对象原型。
+
+### Tests
+
+- 增加转换、所有消息字段、业务回调、RPC 结果 / 通知 / 错误和连接元数据的回归测试；更新旧 undefined 断言。
+- 增加 scripts/test.sh，执行 SDK previewer 中的全部 Hypium 用例，并验证报告而不只依赖 Hvigor 构建退出码。
+
 ## [1.4.0] (2026-10-13)
 
 ### Features

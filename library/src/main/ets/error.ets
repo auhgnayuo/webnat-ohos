@@ -97,45 +97,25 @@ export class WebnatError extends Error {
    * @returns WebnatError 实例，如果 error 为 null 或 undefined 则返回 null
    */
   static from(error: ESObject): WebnatError | null {
-    if (error === null || error === undefined) {
-      return null;
-    }
-    if (typeof error === 'object') {
-      const code = (() => {
-        const obj = error as Record<string, ESObject>;
-        const v: ESObject = obj['code'] ?? obj['errcode'] ?? obj['errCode'] ?? obj['errorcode'] ?? obj['errorCode'];
-        if (!v) {
-          return WebnatErrorCode.UNKNOWN;
-        }
-        if (typeof v === 'number') {
-          const num = v as number;
-          if (Number.isSafeInteger(num)) {
-            return num;
-          }
-        }
-        if (typeof v === 'string') {
-          const c = parseInt(v as string);
-          if (Number.isSafeInteger(c)) {
-            return c;
-          }
-          return WebnatErrorCode.UNKNOWN;
-        }
-        return WebnatErrorCode.UNKNOWN;
-      })();
-      const message = (() => {
-        const obj = error as Record<string, ESObject>;
-        const v: ESObject = obj['message'] ?? obj['msg'] ?? obj['errmsg'] ?? obj['errMsg'] ?? obj['errormsg'] ?? obj['errorMsg'] ?? obj['errormessage'] ?? obj['errorMessage'];
-        if (!v) {
-          return 'Unknown Error';
-        }
-        if (typeof v === 'string') {
-          return v;
-        }
-        return `${v}`;
-      })();
+    if (error === null || error === undefined) return null;
+    if (error instanceof WebnatError) return error;
+    if (typeof error === 'object' && !Array.isArray(error)) {
+      const first = (keys: string[]): ESObject => {
+        for (const key of keys) if (Object.keys(error).indexOf(key) !== -1 || (key === 'message' && error instanceof Error)) return error[key];
+        return undefined;
+      };
+      const rawCode: ESObject = first(['code', 'errcode', 'errCode', 'errorcode', 'errorCode']);
+      let code: number = WebnatErrorCode.UNKNOWN;
+      const number: number = typeof rawCode === 'number' ? rawCode as number :
+        typeof rawCode === 'string' && (rawCode as string).trim() === rawCode && /^[+-]?[0-9]+$/.test(rawCode as string) ? Number(rawCode) : NaN;
+      if (Number.isInteger(number) && number >= -2147483648 && number <= 2147483647) code = number;
+      const rawMessage: ESObject = first(['message', 'msg', 'errmsg', 'errMsg', 'errormsg', 'errorMsg', 'errormessage', 'errorMessage']);
+      const message: string = typeof rawMessage === 'string' ? rawMessage as string :
+        typeof rawMessage === 'boolean' || (typeof rawMessage === 'number' && Number.isFinite(rawMessage as number))
+          ? String(rawMessage) : 'Unknown Error';
       return new WebnatError(code, message);
     }
-    return new WebnatError(WebnatErrorCode.UNKNOWN, `${error}`);
+    return new WebnatError(WebnatErrorCode.UNKNOWN, String(error));
   }
 
   /**

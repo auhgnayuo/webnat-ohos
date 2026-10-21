@@ -165,7 +165,7 @@ export class Webnat {
    * 如果同一个监听器引用已存在，则先移除旧的再添加新的。
    *
    * @param listener 消息监听器回调
-   * @param listener.raw 接收到的消息内容，可以是任意可序列化的对象
+   * @param listener.raw 接收到的消息内容，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）
    * @param listener.connection 消息来源的连接对象
    *
    * @example
@@ -206,7 +206,7 @@ export class Webnat {
    *
    * 将消息包装为 Message 格式后发送到 Web 端。
    *
-   * @param raw 消息体，可以是任意可序列化的对象（String、Number、Object、Array 等）
+   * @param raw 消息体，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）（String、Number、Object、Array 等）
    * @param connection 目标连接，如果连接已关闭则不会发送
    *
    * @example
@@ -231,7 +231,7 @@ export class Webnat {
    *
    * @param name 广播事件名称，用于标识不同的事件类型
    * @param listener 接收到广播时的回调函数
-   * @param listener.params 广播携带的参数，可以是任意可序列化的对象
+   * @param listener.params 广播携带的参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）
    * @param listener.connection 消息来源的连接对象
    *
    * @example
@@ -275,7 +275,7 @@ export class Webnat {
    * 向指定连接或所有连接发送广播消息。如果 `connection` 为 `undefined`，则向所有当前活跃的连接广播。
    *
    * @param name 广播事件名称，用于标识事件类型
-   * @param params 广播参数，可以是任意可序列化的对象，可选
+   * @param params 广播参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message），可选
    * @param connection 目标连接，如果为 `undefined` 则广播到所有连接
    *
    * @example
@@ -313,7 +313,7 @@ export class Webnat {
    *
    * @param name 方法名称，用于标识要处理的方法
    * @param listener 方法处理器回调（异步函数）
-   * @param listener.params 方法调用时传入的参数，可以是任意可序列化的对象
+   * @param listener.params 方法调用时传入的参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message）
    * @param listener.signal AbortSignal，当调用被取消时会触发 abort 事件
    * @param listener.notify 通知回调，用于在方法执行过程中发送进度或状态更新
    * @param listener.connection 调用来源的连接对象
@@ -393,7 +393,7 @@ export class Webnat {
    *
    * @param func 方法调用描述对象
    * @param func.method 要调用的方法名称
-   * @param func.param 方法参数，可以是任意可序列化的对象，可选
+   * @param func.param 方法参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message），可选
    * @param options 方法调用选项，可选
    * @param options.timeout 超时时间（毫秒），超时后会自动取消调用并抛出超时错误
    * @param options.onNotification 收到通知时的回调函数，用于接收方法执行过程中的进度或状态更新
@@ -589,7 +589,8 @@ export class Webnat {
         const openMsg = message.open;
         const paramForAttrs: ESObject = openMsg.param;
         let attributes: Record<string, ESObject> = emptyAttrs;
-        if (paramForAttrs !== undefined) {
+        if (paramForAttrs !== undefined && paramForAttrs !== null &&
+          typeof paramForAttrs === 'object' && !Array.isArray(paramForAttrs)) {
           attributes = paramForAttrs as Record<string, ESObject>;
         }
         // 当前连接的界面 URL（连接建立时页面地址）
@@ -622,7 +623,7 @@ export class Webnat {
             // 重置保活
             this.javaScriptAliveKeeper.delay();
             // 构造 JavaScript 代码调用 Web 端的 receive 方法
-            const js = `window.__web_webnat__.receive(...${string})`;
+            const js = `window.__web_webnat__.receive(...JSON.parse(${JSON.stringify(string)}))`;
             await controller.runJavaScript(js);
           } catch (error) {
             // 平台报告的投递失败照实抛出；raw / broadcast 等走 trySend，仍然静默

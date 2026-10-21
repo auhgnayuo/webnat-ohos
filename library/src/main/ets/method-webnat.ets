@@ -42,6 +42,13 @@ export interface MethodOptions {
 }
 
 export class MethodWebnat {
+  private readonly createCallId: () => string;
+
+  /** 默认使用平台 UUID；测试可注入生成器，避免 previewer 的空 UUID 模拟值。 */
+  constructor(createCallId: () => string = (): string => util.generateRandomUUID()) {
+    this.createCallId = createCallId;
+  }
+
   /**
    * 方法处理函数映射表
    *
@@ -141,7 +148,7 @@ export class MethodWebnat {
    *
    * @param func 方法描述对象
    * @param func.method 要调用的方法名称
-   * @param func.param 方法参数，可以是任意可序列化的对象，可选
+   * @param func.param 方法参数，可以是JSON 兼容的 ArkTS 数据（类型、嵌套空值和限制见 Message），可选
    * @param options 调用选项，可选
    * @param options.timeout 超时时间（毫秒），超时后会自动取消调用并抛出超时错误
    * @param options.onNotification 接收到途中的通知时回调，用于接收方法执行过程中的进度或状态更新
@@ -161,7 +168,7 @@ export class MethodWebnat {
     if (options?.signal?.aborted) {
       throw WebnatError.cancelled();
     }
-    const id = util.generateRandomUUID();
+    const id = this.createCallId();
     const conn = connection as ConnectionImpl;
 
     let cancelAbort: () => void = () => {
