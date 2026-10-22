@@ -15,7 +15,7 @@ export class Open {
    * @param param 可选的初始化参数
    */
   constructor(param?: ESObject) {
-    this.param = param ?? null;
+    this.param = param;
   }
 }
 
@@ -34,7 +34,7 @@ export class Close {
    * @param param 可选的关闭参数（如关闭原因等）
    */
   constructor(param?: ESObject) {
-    this.param = param ?? null;
+    this.param = param;
   }
 }
 
@@ -53,7 +53,7 @@ export class Raw {
    * @param param 原始消息的参数数据
    */
   constructor(param?: ESObject) {
-    this.param = param ?? null;
+    this.param = param;
   }
 }
 
@@ -76,7 +76,7 @@ export class Broadcast {
    */
   constructor(name: string, param?: ESObject) {
     this.name = name;
-    this.param = param ?? null;
+    this.param = param;
   }
 }
 
@@ -103,7 +103,7 @@ export class Invoke {
   constructor(id: string, method: string, param?: ESObject) {
     this.id = id;
     this.method = method;
-    this.param = param ?? null;
+    this.param = param;
   }
 }
 
@@ -129,8 +129,8 @@ export class Reply {
    */
   constructor(id: string, result?: ESObject, error?: ESObject) {
     this.id = id;
-    this.result = result ?? null;
-    this.error = error ?? null;
+    this.result = result;
+    this.error = error;
   }
 }
 
@@ -153,7 +153,7 @@ export class Notify {
    */
   constructor(id: string, param?: ESObject) {
     this.id = id;
-    this.param = param ?? null;
+    this.param = param;
   }
 }
 
@@ -181,8 +181,8 @@ export class Abort {
  *
  * 所有消息的统一格式，包含发送方、接收方和具体的消息类型。
  * param / result / error 仅支持 null、string、boolean、有限 number、普通 Record 对象和数组，递归遵循相同约束。
- * 不接受 undefined（缺失的顶层参数除外）、Map、Set、Date、类实例或循环引用，不隐式调用 toJSON / toString。
- * 对外缺失参数统一为 null；顶层 null 省略字段，嵌套 null 保留字段和数组位置。
+ * 对象属性中的 undefined 省略，数组中的 undefined / 空位转为 null，顶层 undefined 表示字段缺失、Map、Set、Date、类实例或循环引用，不隐式调用 toJSON / toString。
+ * 顶层 null 保留为 JSON null；对象中的 undefined 属性省略，数组中的 undefined / 空位转为 null。
  * 消息类型是互斥的，一条消息只能包含一种类型的消息体。
  *
  * 支持的消息类型：
@@ -396,7 +396,7 @@ export class Message {
 
     if (this.open) {
       const openDict: Record<string, ESObject> = {};
-      if (this.open.param !== undefined && this.open.param !== null) {
+      if (this.open.param !== undefined) {
         openDict["param"] = toJsonValue(this.open.param);
       }
       dict["open"] = openDict;
@@ -404,7 +404,7 @@ export class Message {
 
     if (this.close) {
       const closeDict: Record<string, ESObject> = {};
-      if (this.close.param !== undefined && this.close.param !== null) {
+      if (this.close.param !== undefined) {
         closeDict["param"] = toJsonValue(this.close.param);
       }
       dict["close"] = closeDict;
@@ -412,7 +412,7 @@ export class Message {
 
     if (this.raw) {
       const rawDict: Record<string, ESObject> = {};
-      if (this.raw.param !== undefined && this.raw.param !== null) {
+      if (this.raw.param !== undefined) {
         rawDict["param"] = toJsonValue(this.raw.param);
       }
       dict["raw"] = rawDict;
@@ -422,7 +422,7 @@ export class Message {
       const broadcastDict: Record<string, ESObject> = {
         "name": this.broadcast.name
       };
-      if (this.broadcast.param !== undefined && this.broadcast.param !== null) {
+      if (this.broadcast.param !== undefined) {
         broadcastDict["param"] = toJsonValue(this.broadcast.param);
       }
       dict["broadcast"] = broadcastDict;
@@ -433,7 +433,7 @@ export class Message {
         "id": this.invoke.id,
         "method": this.invoke.method
       };
-      if (this.invoke.param !== undefined && this.invoke.param !== null) {
+      if (this.invoke.param !== undefined) {
         invokeDict["param"] = toJsonValue(this.invoke.param);
       }
       dict["invoke"] = invokeDict;
@@ -443,10 +443,10 @@ export class Message {
       const replyDict: Record<string, ESObject> = {
         "id": this.reply.id
       };
-      if (this.reply.result !== undefined && this.reply.result !== null) {
+      if (this.reply.result !== undefined) {
         replyDict["result"] = toJsonValue(this.reply.result);
       }
-      if (this.reply.error !== undefined && this.reply.error !== null) {
+      if (this.reply.error !== undefined) {
         replyDict["error"] = toJsonValue(this.reply.error);
       }
       dict["reply"] = replyDict;
@@ -456,7 +456,7 @@ export class Message {
       const notifyDict: Record<string, ESObject> = {
         "id": this.notify.id
       };
-      if (this.notify.param !== undefined && this.notify.param !== null) {
+      if (this.notify.param !== undefined) {
         notifyDict["param"] = toJsonValue(this.notify.param);
       }
       dict["notify"] = notifyDict;

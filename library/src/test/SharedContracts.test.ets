@@ -6,7 +6,7 @@ import {toJsonValue,fromJsonValue} from '../main/ets/json-value';
 
 export default function sharedContractsTest() {
  const fixtures: ESObject=JSON.parse(contractJson);
- describe('shared contract v1',()=>{
+ describe('shared contract v2',()=>{
   const errors:ESObject=fixtures.errors;
   for(let i=0;i<errors.length;i++) {
    const c:ESObject=errors[i];it('contract/'+c.id,0,()=>{

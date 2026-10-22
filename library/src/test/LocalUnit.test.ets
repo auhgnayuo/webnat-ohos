@@ -60,7 +60,7 @@ export default function localUnitTest() {
       const parsed = Message.from(dict);
       expect(parsed !== undefined).assertEqual(true);
       expect(parsed?.open !== undefined).assertEqual(true);
-      expect(parsed?.open?.param === null).assertEqual(true);
+      expect(parsed?.open?.param === undefined).assertEqual(true);
     });
   });
 }

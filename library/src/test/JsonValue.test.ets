@@ -40,12 +40,12 @@ export default function jsonValueTest() {
       expect(decoded['list'][1]).assertEqual(null);
     });
 
-    it('missing_and_explicit_null_are_native_null', 0, () => {
-      expect(fromJsonValue(undefined)).assertEqual(null);
+    it('missing_and_explicit_null_remain_distinct', 0, () => {
+      expect(fromJsonValue(undefined) === undefined).assertEqual(true);
       expect(fromJsonValue(null)).assertEqual(null);
       expect(toJsonValue(null)).assertEqual(null);
-      expect(Message.open('peer').open?.param).assertEqual(null);
-      expect(Message.raw('peer').raw?.param).assertEqual(null);
+      expect(Message.open('peer').open?.param === undefined).assertEqual(true);
+      expect(Message.raw('peer').raw?.param === undefined).assertEqual(true);
     });
 
     it('top_level_lists_scalars_and_booleans_are_preserved', 0, () => {
@@ -71,9 +71,15 @@ export default function jsonValueTest() {
       }
     });
 
-    it('rejects_nested_undefined_instead_of_deleting_fields_or_replacing_elements', 0, () => {
-      rejected(undefined); rejected([undefined]); rejected(record('x', undefined));
-      rejected([undefined], true); rejected(record('x', undefined), true);
+    it('omits_object_undefined_and_normalizes_array_undefined_to_null', 0, () => {
+      const value: Record<string, ESObject> = record('drop', undefined);
+      value['keep'] = null;
+      value['list'] = [undefined, null, 1];
+      expect(JSON.stringify(toJsonValue(value))).assertEqual('{"keep":null,"list":[null,null,1]}');
+      expect(JSON.stringify(fromJsonValue(value))).assertEqual('{"keep":null,"list":[null,null,1]}');
+      expect(toJsonValue(undefined) === undefined).assertEqual(true);
+      const hole: ESObject[] = new Array(2);
+      expect(JSON.stringify(toJsonValue(hole))).assertEqual('[null,null]');
     });
 
     it('rejects_cycles_but_permits_shared_children', 0, () => {
@@ -159,7 +165,7 @@ export default function jsonValueTest() {
       }
     });
 
-    it('null_payload_fields_are_omitted_but_decode_as_null', 0, () => {
+    it('missing_payload_fields_are_omitted_and_explicit_null_is_preserved', 0, () => {
       const messages: Message[] = [Message.open('p'), Message.close('p'), Message.raw('p'), Message.broadcast('p', 'e'),
         Message.invoke('p', 'i', 'm'), Message.reply('p', 'i'), Message.notify('p', 'i')];
       for (const message of messages) {
@@ -170,11 +176,12 @@ export default function jsonValueTest() {
       const reply: Message | undefined = Message.from(JSON.parse('{"magic":"WEBNAT","from":"p","to":"native","reply":{"id":"i","result":null,"error":null}}'));
       expect(reply?.reply?.result).assertEqual(null);
       expect(reply?.reply?.error).assertEqual(null);
+      expect(JSON.stringify(reply?.toDictionary())).assertEqual('{"magic":"WEBNAT","from":"p","to":"native","reply":{"id":"i","result":null,"error":null}}');
     });
 
     it('invalid_decoded_data_in_every_payload_field_rejects_the_message', 0, () => {
       const bodies: string[] = ['open', 'close', 'raw', 'broadcast', 'invoke', 'reply', 'notify'];
-      const invalidValues: ESObject[] = [new Date(), NaN, [undefined]];
+      const invalidValues: ESObject[] = [new Date(), NaN, new Map<string, number>()];
       for (const body of bodies) {
         const fields: string[] = body === 'reply' ? ['result', 'error'] : ['param'];
         for (const field of fields) {

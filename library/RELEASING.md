@@ -1,6 +1,6 @@
-# OHOS 2.0.0 release
+# OHOS 2.0.1 release
 
-- ohpm package: **webnat@2.0.0**. Git tag: **v2.0.0**.
+- ohpm package: **webnat@2.0.1**. Git tag: **v2.0.1**.
 - library/oh-package.json5 and library/src/main/ets/version.ets must match.
 - Run the commands below from the webnat-ohos repository root with DevEco / hvigorw / ohpm configured.
 
@@ -29,4 +29,4 @@ ohpm publish library/build/default/outputs/default/library.har
 
 Your account must have package publication permission and the registry's required signature/configuration.
 Do not reuse a stale 1.4.0 HAR. Versions are immutable; confirm a previous upload did not succeed before retrying.
-Upgrade the Web SDK together; nested undefined / class objects / Date / Map are no longer accepted as data.
+Upgrade the Web SDK together; undefined-valued object properties are omitted; undefined array items / holes become null; top-level undefined omits the field while explicit null is preserved. Class objects / Date / Map remain invalid.

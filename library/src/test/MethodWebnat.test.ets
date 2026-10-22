@@ -199,7 +199,7 @@ export default function methodWebnatTest() {
       }).then((): void => {
         expect(out.length).assertEqual(1);
         expect(out[0].reply?.id).assertEqual('rid-5');
-        expect(out[0].reply?.result === null).assertEqual(true);
+        expect(out[0].reply?.result === undefined).assertEqual(true);
         const err = WebnatError.from(out[0].reply?.error as ESObject);
         expect(err?.code).assertEqual(WebnatErrorCode.SERIALIZATION_FAILED);
       });

@@ -292,13 +292,13 @@ export class Webnat {
    */
   broadcast(name: string, params?: ESObject, connection?: Connection): void {
     if (connection) {
-      this.broadcastWebnat.broadcast(name, params ?? null, connection);
+      this.broadcastWebnat.broadcast(name, params, connection);
       return;
     }
     // 快照后遍历，避免回调期间连接集合变化影响当前广播。
     const snapshot = Array.from(this.connections.values());
     snapshot.forEach((c) => {
-      this.broadcastWebnat.broadcast(name, params ?? null, c);
+      this.broadcastWebnat.broadcast(name, params, c);
     });
   }
 

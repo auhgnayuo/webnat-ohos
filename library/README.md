@@ -29,7 +29,7 @@ Or add to your `oh-package.json5`:
 ```json5
 {
   "dependencies": {
-    "webnat": "2.0.0"
+    "webnat": "2.0.1"
   }
 }
 ```
@@ -44,20 +44,18 @@ Webnat requires a Web-side implementation and also supports other Native platfor
 | iOS / macOS (Swift) | [webnat-darwin](https://github.com/auhgnayuo/webnat-darwin) |
 | Android (Kotlin) | [webnat-android](https://github.com/auhgnayuo/webnat-android) |
 
-## 2.0.0 Data Contract and Migration
+## 2.0.1 Data Contract and Migration
+
+This 2.0.1 release distinguishes missing values from explicit JSON null. The previously published 2.0.0 contract v1 remains immutable.
 
 Payloads, results, and notifications accept only JSON-compatible data: null, strings, booleans,
 finite numbers, plain string-keyed records, and arrays, recursively. Objects use
 `Record<string, ESObject>` and arrays use `ESObject[]`; ESObject is an interoperability carrier,
 not permission to send arbitrary classes. JavaScript Map is not a JSON object.
 
-Map, Set, Date, class instances, functions, symbol keys, accessors, hidden fields, non-finite numbers, circular references, and nested
-undefined are rejected. Encoding recursively validates and copies values without invoking toJSON /
-toString. JSON.stringify not throwing is not sufficient validation.
+Map, Set, Date, class instances, functions, symbol keys, accessors, hidden fields, non-finite numbers, and circular references are rejected. Undefined-valued object properties are recursively omitted; undefined array items / holes become null. At the top level, undefined omits the field while explicit null is preserved. Encoding does not invoke toJSON / toString.
 
-Missing top-level payload fields and explicit JSON null both become native null. Top-level null
-fields remain omitted; nested null dictionary keys and array positions are preserved, as are
-empty string keys and special JSON keys such as __proto__.
+A missing top-level value means the payload field is absent; explicit null remains JSON null. Nested object undefined properties are omitted; array undefined items / holes become null without shifting positions. Explicit nested nulls are preserved, as are empty string keys and special JSON keys such as __proto__.
 Connection attributes accept objects only; null, arrays, and scalar connection parameters use an empty object instead.
 
 Invalid sends follow the existing failure semantics: method rejects with SERIALIZATION_FAILED;
@@ -188,4 +186,4 @@ See `contracts/README.md` for versioned golden fixtures and `contracts/CI.md` fo
 
 ## Release
 
-Manual release instructions and migration notes: `RELEASING.md`. Upgrade the Web SDK and native bridge together to 2.0.0.
+Manual release instructions and migration notes: `RELEASING.md`. Upgrade the Web SDK and native bridge together to 2.0.1.

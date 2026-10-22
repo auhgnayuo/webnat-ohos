@@ -3,25 +3,26 @@ import { WebnatError, WebnatErrorCode } from './error';
 /**
  * 将业务数据递归转换为可编码的 JSON 值。
  * 仅支持 null、string、boolean、有限 number、普通字符串键对象和数组。
- * ESObject 只是承载类型，不代表允许任意对象。拒绝 undefined、Map、Set、Date、
- * 类实例、函数、Symbol 键、访问器、隐藏字段、非有限数字和循环引用；不调用 toJSON / toString，也不删除字段。
+ * ESObject 只是承载类型，不代表允许任意对象。对象属性中的 undefined 会递归省略；数组中的 undefined / 空位转为 null。
+ * 顶层 undefined 表示缺失，显式 null 保留。Map、Set、Date、类实例、函数、Symbol 键、访问器、隐藏字段、非有限数字和循环引用仍然拒绝。
  */
 export function toJsonValue(value: ESObject): ESObject {
   return convert(value, false, []);
 }
 
 /**
- * 将接收的 JSON 数据转换为业务数据；缺失的顶层字段和 JSON null 均为 null。
- * 嵌套 null 保留键和数组位置，嵌套 undefined 非法；不会跳过非法元素。
+ * 将接收的 JSON 数据转换为业务数据；缺失的顶层值保持 undefined，显式 JSON null 保持 null。
+ * 对象属性中的 undefined 递归省略，数组中的 undefined / 空位转为 null。
  */
 export function fromJsonValue(value: ESObject): ESObject {
-  return convert(value === undefined ? null : value, true, []);
+  return convert(value, true, []);
 }
 
 function convert(value: ESObject, decoding: boolean, ancestors: ESObject[]): ESObject {
   const fail = (reason: string): never => {
     throw new WebnatError(decoding ? WebnatErrorCode.DESERIALIZATION_FAILED : WebnatErrorCode.SERIALIZATION_FAILED, reason);
   };
+  if (value === undefined) return undefined;
   if (value === null) return null;
   const type = typeof value;
   if (type === 'string' || type === 'boolean') return value;
@@ -36,7 +37,10 @@ function convert(value: ESObject, decoding: boolean, ancestors: ESObject[]): ESO
     if (Array.isArray(value)) {
       const result: ESObject[] = [];
       const array: ESObject = value;
-      for (let i = 0; i < array.length; i++) result.push(convert(array[i], decoding, ancestors));
+      for (let i = 0; i < array.length; i++) {
+        const item: ESObject = convert(array[i], decoding, ancestors);
+        result.push(item === undefined ? null : item);
+      }
       return result;
     }
     // ESObject 是与 JS JSON 值互操作的边界；反射只在此处使用。
@@ -52,6 +56,7 @@ function convert(value: ESObject, decoding: boolean, ancestors: ESObject[]): ESO
       if (source.get !== undefined || source.set !== undefined) fail('JSON records cannot contain accessors');
       // defineProperty 保留 __proto__ 等合法 JSON 键，不能意外修改原型。
       const descriptor: Record<string, ESObject> = {};
+      if (source.value === undefined) continue;
       descriptor['value'] = convert(source.value, decoding, ancestors);
       descriptor['enumerable'] = true;
       descriptor['writable'] = true;

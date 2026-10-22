@@ -103,13 +103,15 @@ export default function webnatTest() {
       h.webnat.onRenderExited();
     });
 
-    it('missing_and_explicit_null_parameters_are_native_null_in_callbacks', 0, () => {
+    it('missing_and_explicit_null_parameters_remain_distinct_in_callbacks', 0, () => {
       const h = new Harness(); h.open('main');
-      let count: number = 0;
-      h.webnat.onRaw((value: ESObject, _connection: Connection): void => { expect(value).assertEqual(null); count++; });
+      const values: ESObject[] = [];
+      h.webnat.onRaw((value: ESObject, _connection: Connection): void => { values.push(value); });
       h.controller.post('{"magic":"WEBNAT","from":"main","to":"native","raw":{}}');
       h.controller.post('{"magic":"WEBNAT","from":"main","to":"native","raw":{"param":null}}');
-      expect(count).assertEqual(2);
+      expect(values.length).assertEqual(2);
+      expect(values[0] === undefined).assertEqual(true);
+      expect(values[1]).assertEqual(null);
       h.webnat.onRenderExited();
     });
 

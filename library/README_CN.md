@@ -29,7 +29,7 @@ ohpm install webnat
 ```json5
 {
   "dependencies": {
-    "webnat": "2.0.0"
+    "webnat": "2.0.1"
   }
 }
 ```
@@ -44,17 +44,17 @@ Webnat 需要配合 Web 端实现使用，同时也支持其他 Native 平台：
 | iOS / macOS (Swift) | [webnat-darwin](https://github.com/auhgnayuo/webnat-darwin) |
 | Android (Kotlin) | [webnat-android](https://github.com/auhgnayuo/webnat-android) |
 
-## 2.0.0 数据约定与迁移
+## 2.0.1 数据约定与迁移
+
+2.0.1 开始区分字段缺失与显式 JSON null。已发布的 2.0.0 合同 v1 保持不变。
 
 业务参数、方法结果和通知只接受 JSON 可表达的数据：字符串、布尔值、有限数字、对象 / 字典、数组 / 列表和空值，递归遵循同一约定。类型签名只是承载这些数据，不意味着任意对象都可发送。非法数据明确失败，不通过字符串描述兜底，也不静默丢弃元素。
 
 ArkTS 对象使用普通的 `Record<string, ESObject>`，数组使用 `ESObject[]`。
 `ESObject` 是 JSON 数据互操作边界，不表示支持任意类实例；JavaScript 的 `Map` 不是这里的 JSON 对象。
-不接受 `Map`、`Set`、`Date`、类实例、函数、Symbol 键、访问器、隐藏字段、非有限数字、循环引用或嵌套 `undefined`；
-编码前递归检查并复制数据，不调用 `toJSON` / `toString`，不能依靠 `JSON.stringify` 是否抛异常判断合法性。
+不接受 `Map`、`Set`、`Date`、类实例、函数、Symbol 键、访问器、隐藏字段、非有限数字和循环引用。对象属性中的 `undefined` 递归省略，数组中的 `undefined` / 空位转为 `null`。
 
-缺失的顶层参数与显式 JSON null 对外统一为 `null`。顶层 null 仍省略对应字段；
-嵌套 null 保留对象键和数组位置，空字符串键和 `__proto__` 等合法 JSON 键也会保留。
+顶层 `undefined` 表示字段缺失，显式 `null` 保留为 JSON null；嵌套对象的 `undefined` 属性递归省略，数组中的 `undefined` / 空位转为 `null`，嵌套 `null` 保留位置。空字符串键和 `__proto__` 等合法 JSON 键也会保留。
 `Connection.attributes` 只接受对象；null、数组和基本类型的连接参数不作为属性，使用空对象。
 
 非法发送数据遵循原有失败语义：`method` 以 `SERIALIZATION_FAILED` 失败，非法方法结果回复该错误；
@@ -194,4 +194,4 @@ aboutToDisappear() {
 
 ## 发布
 
-本次统一为 2.0.0 / v2.0.0。请同步升级 Web SDK 与 Native 桥；手动发布命令与迁移说明见 `RELEASING.md`。
+本次统一为 2.0.1 / v2.0.1。请同步升级 Web SDK 与 Native 桥；手动发布命令与迁移说明见 `RELEASING.md`。

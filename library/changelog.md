@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-22
+
+- 区分字段缺失与显式 JSON null；对象 undefined 属性省略，数组 undefined / 空位转为 null，顶层 undefined 省略而 null 保留。新增合同 v2，保持已发布的合同 v1 不变。
+
+
 ## [2.0.0] - 2026-10-21
 
 This is a coordinated **major / breaking release** across Web, Electron, Darwin, Android and OHOS. Upgrade both sides of the bridge together; migration and manual publishing instructions are in `RELEASING.md`. Contract fixtures v1 are frozen for this release.

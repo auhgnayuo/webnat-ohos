@@ -240,7 +240,7 @@ export class BroadcastMethodCall {
     if (error) {
       this.rejectFn?.(error);
     } else {
-      this.resolveFn?.(result ?? null);
+      this.resolveFn?.(result);
     }
     this.onFinished();
   }
